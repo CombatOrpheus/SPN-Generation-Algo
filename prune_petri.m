@@ -1,4 +1,4 @@
-##function prune_petri(petri_net_matrix, tran_num)
+function prune_petri(petri_net_matrix, tran_num)
   petri_net_matrix = dele_edage(petri_net_matrix);
   petri_net_matrix = add_node(petri_net_matrix, tran_num);
 endfunction
