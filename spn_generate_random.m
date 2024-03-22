@@ -16,8 +16,7 @@ function [cm, lambda] = spn_generate_random(pn, tn, prob, max_lambda)
   transitions = [1:tn]' + pn;
 
   sub_gra = [];
-  remain_node = unique([places; transitions]);
-
+  remain_node = [places; transitions];
 
   % Get a random pair of place and transition to start the process
   pi = random_choice(places);
@@ -31,8 +30,8 @@ function [cm, lambda] = spn_generate_random(pn, tn, prob, max_lambda)
     cm(pi, tn + tj) = 1;
   endif
 
+  remain_node = remain_node(remain_node != pi & remain_node != tj);
   node_choices = randperm(remain_node);
-
   for r_node = node_choices
     p_idxs = sub_gra <= pn;
     if r_node <= pn % r_node is a place
@@ -60,7 +59,7 @@ function [cm, lambda] = spn_generate_random(pn, tn, prob, max_lambda)
 
   % If there are no elements equal to one on the last column, randomly select an
   % element and set it to one
-  if (any(cm(:, end)))
+  if (~any(cm(:, end)))
     len = numel(cm(:, end));
     i = randi(len);
     cm(i, end) = 1;
@@ -68,9 +67,4 @@ function [cm, lambda] = spn_generate_random(pn, tn, prob, max_lambda)
 
   % For each transition, choose a random value [1, max_lambda] as its lambda
   lambda = randi(max_lambda, tn, 1);
-endfunction
-
-function node = random_choice(vec)
-  idx = randi(numel(vec));
-  node = vec(idx);
 endfunction
