@@ -31,6 +31,8 @@ function [cm, lambda] = spn_generate_random(pn, tn, prob, max_lambda)
   endif
 
   remain_node = remain_node(remain_node != pi & remain_node != tj);
+  % A simple permutation is equivalent to a series of random choices; the former
+  % is also faster in Octave, so that's what we will do.
   node_choices = randperm(remain_node);
   for r_node = node_choices
     p_idxs = sub_gra <= pn;
