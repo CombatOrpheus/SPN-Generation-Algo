@@ -1,9 +1,9 @@
-function prune_petri(petri_net_matrix, tran_num)
-  petri_net_matrix = dele_edage(petri_net_matrix);
-  petri_net_matrix = add_node(petri_net_matrix, tran_num);
+function new_net = prune_petri(petri_net_matrix, tran_num)
+  new_net = dele_edage(petri_net_matrix);
+  new_net = add_node(petri_net_matrix, tran_num);
 endfunction
 
-function dele_edage(petri_net_matrix)
+function new_net = dele_edage(petri_net_matrix)
   # Exclude the last row
   row_idxs = find(sum(petri_net_matrix(:, 1:end-1), 2) >= 3);
   choices = arrayfun(@random_choice, row_idxs);
@@ -11,16 +11,17 @@ function dele_edage(petri_net_matrix)
 
   # Exclude the last row
   column_totals = sum(petri_net_matrix(1:end-1, :), 1);
+  column_idxs = find(column_totals >= 3);
   for idx = column_idxs
     column = petri_net_matrix(idx, :);
     idxs = find(column == 1);
     choice = random_choice(column(idxs), sum(idxs) - 2);
     column(choice) = 0;
-    endif
   endfor
+  new_net = petri_net_matrix;
 endfunction
 
-function add_node(petri_net_matrix, tran_num)
+function new_net = add_node(petri_net_matrix, tran_num)
   left_matrix = petri_net_matrix(:, 1:tran_num);
   right_matrix = petri_net_matrix(:, (tran_num + 1):(end - 1));
   column_size = length(petri_net_matrix(:, 1));
@@ -39,4 +40,5 @@ function add_node(petri_net_matrix, tran_num)
   row_idxs = ~any(right_matrix, 2);
   choices = randi(column_size, numel(row_idxs));
   right_matrix(row_idxs, choices) = 1;
+  new_net = petri_net_matrix;
 endfunction

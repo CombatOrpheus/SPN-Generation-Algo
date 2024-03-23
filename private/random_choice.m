@@ -1,4 +1,4 @@
 function choice = random_choice(vec, num=1)
-  idxs = randi(len(vec), num);
+  idxs = randi(length(vec), num);
   choice = vec(idxs);
 endfunction
