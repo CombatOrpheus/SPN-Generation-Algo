@@ -1,9 +1,9 @@
 function new_net = prune_petri(petri_net_matrix, tran_num)
-  new_net = dele_edage(petri_net_matrix);
+  new_net = dele_edge(petri_net_matrix);
   new_net = add_node(petri_net_matrix, tran_num);
 endfunction
 
-function new_net = dele_edage(petri_net_matrix)
+function new_net = dele_edge(petri_net_matrix)
   # Exclude the last row
   row_idxs = find(sum(petri_net_matrix(:, 1:end-1), 2) >= 3);
   choices = arrayfun(@random_choice, row_idxs);
