@@ -4,19 +4,22 @@ function new_net = prune_petri(petri_net_matrix, tran_num)
 endfunction
 
 function new_net = dele_edge(petri_net_matrix)
-  # Exclude the last row
+  # Find the rows that have at least three tokens, excluding the last element of
+  # each row, as they represent the marking.
   row_idxs = find(sum(petri_net_matrix(:, 1:end-1), 2) >= 3);
+  # Select a random element from each row and set it to 0
   choices = arrayfun(@random_choice, row_idxs);
   petri_net_matrix(row_idxs, choices) = 0;
 
-  # Exclude the last row
+  # Do the same process, but for the columns this time.
   column_totals = sum(petri_net_matrix(1:end-1, :), 1);
   column_idxs = find(column_totals >= 3);
+  choice_idxs = find(petri_net_matrix == 1, )
   for idx = column_idxs
     column = petri_net_matrix(idx, :);
     idxs = find(column == 1);
     choice = random_choice(column(idxs), sum(idxs) - 2);
-    column(choice) = 0;
+    petri_net_matrix(row, choice) = 0;
   endfor
   new_net = petri_net_matrix;
 endfunction
