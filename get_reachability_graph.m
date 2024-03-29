@@ -1,8 +1,19 @@
-% result_struct = get_arrivable_graph(petri_matrix, place_upper_limit, marks_upper_limit)
+% result_struct = get_reachability_graph(petri_matrix, place_upper_limit, marks_upper_limit)
 % Obtain the reachable graph of the petri net.
 % Inputs:
 %   petri_matrix: The petri net in compound matrix for [A+';A-':M0].
-function result_struct = get_arrivable_graph(...
+%   place_upper_limit: The maximum number of tokens in any place before the net
+%   is considered unbounded. The default value is 10.
+%   marks_upper_limit: The maximum number of markings before considering a net
+%   unbouded. The default value is 500.
+% Outputs:
+%   The results are outputed as a single structure.
+%   v_list: The set of vertices of the reachable graph.
+%   edge_list: The set of edges of the reachable graph.
+%   arctrans_list: The set of arc transitions of the reachable graph.
+%   tran_num: The number of transitions on the Petri net.
+%   bounded: Whether the Petri net is bounded or unbouded.
+function result_struct = get_reachability_graph(...
   petri_matrix, place_upper_limit=10, marks_upper_limit=500)
   tran_num = (rows(petri_matrix) - 1)/2;
   # Tokens needed to enable a transition; they are consumed when fired
@@ -13,17 +24,17 @@ function result_struct = get_arrivable_graph(...
   M0 = petri_matrix(:, end);
   counter = 0;
   new_list = [0];
-  # Construct the
+  # Construct the Incidence matrix
   C = T_out - T_in;
   result_struct.v_list = [M0];
   result_struct.edge_list = [];
   result_struct.arctrans_list = [];
   result_struct.tran_num = tran_num;
-  result_struct.bound_flag = true;
+  result_struct.bounded = true;
 
   while (~isempty(new_list))
     if (counter > marks_upper_limit)
-      result_struct.bound_flag = false; return;
+      result_struct.bounded = false; return;
     endif
 
     new_marking = random_choice(new_list);
@@ -31,10 +42,10 @@ function result_struct = get_arrivable_graph(...
       enable_sets(T_in, T_out, result_struct.v_list(new_marking);
     for bs = graph_enabled_sets
       if (any(bs > place_upper_limit)
-        result_struct.bound_flag = false; return;
+        result_struct.bounded = false; return;
       else
         for ent_idx = transition_sets
-          t = zeros(tran_num, "unit8");
+          t = zeros(tran_num, "unit32");
           t[ent_idx] = 1;
           marking = result_struct.v_list(new_marking) + dot(C, t);
           new_marking_idx = wherevec(marking, result_struct.v_list);
