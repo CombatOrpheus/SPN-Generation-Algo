@@ -24,7 +24,8 @@ function result_struct = get_reachability_graph(...
   M0 = petri_matrix(:, end);
   counter = 0;
   new_list = [0];
-  # Construct the Incidence matrix
+  # Construct the Incidence matrix; to compute the new marking, we only need to
+  # sum the marking and the column for the fired transition.
   C = T_out - T_in;
   result_struct.v_list = [M0];
   result_struct.edge_list = [];
@@ -34,19 +35,19 @@ function result_struct = get_reachability_graph(...
 
   while (~isempty(new_list))
     if (counter > marks_upper_limit)
-      result_struct.bounded = false; return;
+      result_struct.bounded = false; return
     endif
 
     new_marking = random_choice(new_list);
     [graph_enabled_sets, transition_sets] = ...
-      enable_sets(T_in, T_out, result_struct.v_list(new_marking);
+      enabled_sets(T_in, T_out, result_struct.v_list(new_marking));
     for bs = graph_enabled_sets
-      if (any(bs > place_upper_limit)
-        result_struct.bounded = false; return;
+      if (any(bs > place_upper_limit))
+        result_struct.bounded = false; return
       else
         for ent_idx = transition_sets
           t = zeros(tran_num, "unit32");
-          t[ent_idx] = 1;
+          t(ent_idx) = 1;
           marking = result_struct.v_list(new_marking) + dot(C, t);
           new_marking_idx = wherevec(marking, result_struct.v_list);
           if (new_marking_idx == -1)
@@ -73,11 +74,11 @@ function vec = wherevec(row_vec, matrix)
   vec = -1;
   idxs = ~all(matrix - row_vec, 1);
   if ~isempty(idxs)
-    vec = idxs[1];
+    vec = idxs(1);
   endif
 endfunction
 
-function [ena_mlist, ena_list] = enable_sets(A1, A2, M):
+function [ena_mlist, ena_list] = enabled_sets(A1, A2, M)
   ena_list = [];
   ena_mlist = [];
   for i = 1:rows(A1)
