@@ -4,7 +4,6 @@ function new_net = prune_petri(petri_net_matrix)
 endfunction
 
 function new_net = del_edge(petri_net_matrix)
-  row_length = columns(petri_net_matrix) - 1;
   # Find the rows that move at least three tokens, excluding the last column,
   # as it represents the net marking.
   row_totals = sum(petri_net_matrix(:, 1:end-1), 2);
@@ -36,7 +35,7 @@ function new_net = add_node(petri_net_matrix)
   column_idxs = find(sum(petri_net_matrix(:, 1:end-1), 1) == 0);
   if (any(column_idxs))
     choices = randi(column_size, sum(column_idxs));
-    petri_net_matrix(choices, column_idxs) = 1
+    petri_net_matrix(choices, column_idxs) = 1;
   endif
 
   tran_num = (columns(petri_net_matrix) - 1)/2;
