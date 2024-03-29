@@ -1,25 +1,28 @@
 function new_net = prune_petri(petri_net_matrix, tran_num)
-  new_net = dele_edge(petri_net_matrix);
+  new_net = del_edge(petri_net_matrix);
   new_net = add_node(petri_net_matrix, tran_num);
 endfunction
 
-function new_net = dele_edge(petri_net_matrix)
-  # Find the rows that have at least three tokens, excluding the last element of
-  # each row, as they represent the marking.
-  row_idxs = find(sum(petri_net_matrix(:, 1:end-1), 2) >= 3);
-  # Select a random element from each row and set it to 0
-  choices = arrayfun(@random_choice, row_idxs);
-  petri_net_matrix(row_idxs, choices) = 0;
+function new_net = del_edge(petri_net_matrix)
+  row_length = columns(petri_net_matrix) - 1;
+  # Find the rows that move at least three tokens, excluding the last column,
+  # as it represents the net marking.
+  row_totals = sum(petri_net_matrix(:, 1:end-1), 2);
+  row_idxs = find(row_totals >= 3);
+  # Select sum - 2 random indexes from each row and set them to 0
+  for row = row_idxs
+    idxs = find(petri_net_matrix(:, row) == 1);
+    rm_idxs = random_choice(idxs, row_totals(i) - 2);
+    petri_net_matrix(row, rm_idxs) = 0
+  endfor
 
   # Do the same process, but for the columns this time.
-  column_totals = sum(petri_net_matrix(1:end-1, :), 1);
+  column_totals = sum(petri_net_matrix(:, 1:end-1), 1);
   column_idxs = find(column_totals >= 3);
-  choice_idxs = find(petri_net_matrix == 1, )
-  for idx = column_idxs
-    column = petri_net_matrix(idx, :);
-    idxs = find(column == 1);
-    choice = random_choice(column(idxs), sum(idxs) - 2);
-    petri_net_matrix(row, choice) = 0;
+  for column = column_idxs
+    idxs = find(petri_net_matrix(column, :) == 1);
+    rm_idxs = random_choice(idxs, column_totals - 2);
+    petri_net_matrix(rm_idxs, column) = 0;
   endfor
   new_net = petri_net_matrix;
 endfunction
