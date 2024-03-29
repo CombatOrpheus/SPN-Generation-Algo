@@ -13,13 +13,13 @@ function new_net = del_edge(petri_net_matrix)
   # Octave iterates over the columns, so we have to transpose the row_idxs
   # because it is a tall vector.
   for row = row_idxs'
-    idxs = find(petri_net_matrix(row, :) == 1);
+    idxs = find(petri_net_matrix(row, 1:end-1) == 1);
     rm_idxs = random_choice(idxs, row_totals(row) - 2);
     petri_net_matrix(row, rm_idxs) = 0;
   endfor
 
   # Do the same process, but for the columns this time.
-    column_totals = sum(petri_net_matrix(:, 1:end-1), 1);
+  column_totals = sum(petri_net_matrix(:, 1:end-1), 1);
   column_idxs = find(column_totals >= 3);
   # column_idxs is already a row vector, so there is no need to transpose it.
   for column = column_idxs
