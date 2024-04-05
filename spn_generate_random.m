@@ -56,7 +56,7 @@ function [cm, lambda] = spn_generate_random(pn, tn, prob, max_lambda)
 
   % For each element in the matrix with a value of zero, we have a probabilitiy
   % prob of setting it to one
-  one_idxs = rand(size(cm)) >= prob; % Faster to just generate the whole matrix
+  one_idxs = rand(size(cm)) <= prob; % Faster to just generate the whole matrix
   cm(cm == 0 & one_idxs) = 1;
 
   % If there are no elements equal to one on the last column, randomly select an
