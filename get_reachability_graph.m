@@ -83,23 +83,13 @@ function row_index = wherevec(row_vec, matrix)
   endif
 endfunction
 
-function [ena_mlist, ena_list] = enabled_sets(A1, A2, M)
-  ena_list = [];
-  ena_mlist = [];
-  for i = 1:rows(A1)
-    % Pre-set
-    pro_idx = find(A1(:, i) == 1);
-    m_token = M(pro_idx);
-    m_enable = find(m_token == 0);
-    if (numel(m_enable) == numel(m_token))
-      ena_list = [ena_list ; i];
-      # Update the marking; subtract 1 from the pre-set and add 1 to the
-      # post-set
-      M(pro_idx) -= 1;
-      % Post-set
-      post_idx = find(A2(:, i) == 1);
-      M(post_idx) += 1;
-      ena_mlistlist = [ena_mlist; M];
-    endif
-  endfor
+function [new_markings, enabled_transitions] = enabled_sets(A1, A2, M)
+  % Given the Pre-set and the current marking, find which transitions (columns)
+  % are enabled.
+  % First, check which columns on A1 can be enabled, given the current amount of
+  % tokens for the current marking.
+  enabled_transitions = find(all(A1 >= M, 1));
+  % Then, for each enabled transition (column), consume the input tokens (-A1)
+  % and generate the output tokens (+A2).
+  new_markings = M - A1(:, enabled_transitions) + A2(:, enabled_transitions);
 endfunction
