@@ -19,8 +19,8 @@ function [cm, lambda] = spn_generate_random(pn, tn, prob, max_lambda)
   remain_node = [places; transitions];
 
   % Get a random pair of place and transition to start the process
-  pi = random_choice(places);
-  tj = random_choice(transitions);
+  pi = randi(pn);
+  tj = randi(tn) + pn;
   sub_gra = [pi; tj];
   rand_num = rand();
   tj -= pn; % correcting the index
@@ -38,16 +38,15 @@ function [cm, lambda] = spn_generate_random(pn, tn, prob, max_lambda)
     p_idxs = sub_gra <= pn;
     if r_node <= pn % r_node is a place
       pi = r_node;
-      tj = random_choice(sub_gra(!p_idxs));
+      tj = random_choice(sub_gra(~p_idxs));
     else % r_node is a transition
       pi = random_choice(sub_gra(p_idxs));
       tj = r_node;
     endif
 
     sub_gra = [sub_gra; r_node];
-    rand_num = rand();
     tj -= pn; % correcting the index
-    if rand_num <= 0.5
+    if rand() <= 0.5
       cm(pi, tj) = 1;
     else
       cm(pi, tn + tj) = 1;
