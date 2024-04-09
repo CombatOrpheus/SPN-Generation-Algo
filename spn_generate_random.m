@@ -10,7 +10,7 @@
 %   cm: The compound matrix (inflows (pn, tn); outflows (pn, tn); M_0 (tn, 1))
 %   lambda: A vector with the lambda for each transition.
 function [cm, lambda] = spn_generate_random(pn, tn, prob, max_lambda)
-  cm = zeros(pn, 2*tn + 1, "unit8");
+  cm = zeros(pn, 2*tn + 1, "uint8");
 
   places = [1:pn]';
   transitions = [1:tn]' + pn;
