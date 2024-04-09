@@ -70,11 +70,16 @@ function result_struct = get_reachability_graph(...
   endwhile
 endfunction
 
-function vec = wherevec(row_vec, matrix)
-  vec = -1;
-  idxs = ~all(matrix - row_vec, 1);
-  if ~isempty(idxs)
-    vec = idxs(1);
+function row_index = wherevec(row_vec, matrix)
+  % Find the index of the first row in a matrix that is equal to the given
+  % vector; if none are equal, return -1.
+  row_index = -1;
+  % Broadcasted operation
+  equal_matrix = (matrix == row_vec);
+  % First, check which rows are equal to the vector, then, if any are equal
+  % get their index.
+  if any(all(equal_matrix, 2))
+    row_index = find(all(equal_matrix, 2), 1);
   endif
 endfunction
 
