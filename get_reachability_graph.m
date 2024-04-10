@@ -1,7 +1,7 @@
 % result_struct = get_reachability_graph(petri_matrix, place_upper_limit, marks_upper_limit)
-% Obtain the reachable graph of the petri net.
+% Obtain the reachable graph of a petri net.
 % Inputs:
-%   petri_matrix: The petri net in compound matrix for [A+';A-':M0].
+%   petri_matrix: The petri net in compound matrix for [A+';A-';M0].
 %   place_upper_limit: The maximum number of tokens in any place before the net
 %   is considered unbounded. The default value is 10.
 %   marks_upper_limit: The maximum number of markings before considering a net
@@ -13,14 +13,14 @@
 %   arctrans_list: The set of arc transitions of the reachable graph.
 %   tran_num: The number of transitions on the Petri net.
 %   bounded: Whether the Petri net is bounded or unbouded.
-function result_struct = get_reachability_graph(...
-  petri_matrix, place_upper_limit=10, marks_upper_limit=500)
+function result_struct = get_reachability_graph(petri_matrix, place_upper_limit=10, marks_upper_limit=500)
+  % The number of transitions is the number of rows in either A+' or A-'
   tran_num = (rows(petri_matrix) - 1)/2;
   # Tokens needed to enable a transition; they are consumed when fired
   T_in = petri_matrix(:, 1:tran_num);
   # Tokens produced when a transition is fired
   T_out = petri_matrix(:, (tran_num+1):end-1);
-  # The initial marking of the Petri Net
+  # The initial marking of the Petri Net; the last column of the compound matrix
   M0 = petri_matrix(:, end);
   counter = 0;
   new_list = [0];
@@ -35,10 +35,12 @@ function result_struct = get_reachability_graph(...
 
   while (~isempty(new_list))
     if (counter > marks_upper_limit)
+      % Possibly unbounded Petri net; a higher upper limit might prove this wrong
       result_struct.bounded = false; return
     endif
 
-    new_marking = random_choice(new_list);
+    % Get a random marking from the list; each column is a marking
+    new_marking = new_list(:, randi(columns(new_list)));
     [graph_enabled_sets, transition_sets] = ...
       enabled_sets(T_in, T_out, result_struct.v_list(new_marking));
     for bs = graph_enabled_sets
@@ -46,7 +48,7 @@ function result_struct = get_reachability_graph(...
         result_struct.bounded = false; return
       else
         for ent_idx = transition_sets
-          t = zeros(tran_num, "unit32");
+          t = zeros(tran_num, "uint32");
           t(ent_idx) = 1;
           marking = result_struct.v_list(new_marking) + dot(C, t);
           new_marking_idx = wherevec(marking, result_struct.v_list);
