@@ -86,9 +86,21 @@ endfunction
 function [new_markings, enabled_transitions] = enabled_sets(A1, A2, M)
   % Given the Pre-set and the current marking, find which transitions (columns)
   % are enabled.
-  % First, check which columns on A1 can be enabled, given the current amount of
-  % tokens for the current marking.
-  enabled_transitions = find(all(A1 >= M, 1));
+  % Inputs:
+  %   A1: The transposed Petri net pre-sets, where each column is a transition.
+  %   A2: The transposed Petri net post-sets, where each column is a transition.
+  %   M: A single vector representing the current marking; a column vector.
+  % Outputs:
+  %   new_markings: a matrix containing the new markings generated after firing
+  %   all enabled transitions; each column is a new marking.
+  %   enabled_transitions: a vector containing the index of the enabled
+  %   transitions, in the form of a row vector'.
+
+  % First, we have to check which transitions (columns on A1) can be enabled,
+  % given the current marking (tokens in each place); the marking (M) must have
+  % at least as many tokens in each input place in order to be enable a
+  % transition.
+  enabled_transitions = find(all(M >= A, 1));
   % Then, for each enabled transition (column), consume the input tokens (-A1)
   % and generate the output tokens (+A2).
   new_markings = M - A1(:, enabled_transitions) + A2(:, enabled_transitions);
