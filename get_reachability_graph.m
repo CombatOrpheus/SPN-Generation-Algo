@@ -33,6 +33,7 @@ function result_struct = get_reachability_graph(petri_matrix, place_upper_limit=
   result_struct.tran_num = tran_num;
   result_struct.bounded = true;
 
+  % Continue looping while there are new markings
   while (~isempty(new_list))
     if (counter > marks_upper_limit)
       % Possibly unbounded Petri net; a higher upper limit might prove this wrong
@@ -41,30 +42,28 @@ function result_struct = get_reachability_graph(petri_matrix, place_upper_limit=
 
     % Get a random marking from the list; each column is a marking
     new_marking = new_list(:, randi(columns(new_list)));
-    [graph_enabled_sets, transition_sets] = ...
-      enabled_sets(T_in, T_out, result_struct.v_list(new_marking));
-    for bs = graph_enabled_sets
+    [new_markings, enabled_transitions] = enabled_sets(T_in, T_out, result_struct.v_list(new_marking));
+    for bs = new_markings
       if (any(bs > place_upper_limit))
-        result_struct.bounded = false; return
+	% Possibly unbounded Petri net
+        result_struct.bounded = false; return;
       else
-        for ent_idx = transition_sets
-          t = zeros(tran_num, "uint32");
+        for ent_idx = enabled_transitions
+	  % Row vector
+          t = zeros(tran_num, 1, "uint32");
           t(ent_idx) = 1;
-          marking = result_struct.v_list(new_marking) + dot(C, t);
+          marking = result_struct.v_list(:, new_marking) + dot(C, t);
           new_marking_idx = wherevec(marking, result_struct.v_list);
           if (new_marking_idx == -1)
             counter += 1;
             result_struct.v_list = [result_struct.v_list; counter];
             new_list = [new_list; counter];
-            result_struct.edge_list = ...
-              [result_struct.edge_list; [new_marking, counter]];
+            result_struct.edge_list = [result_struct.edge_list; [new_marking, counter]];
           else
-            result_struct.edge_list = ...
-              [result_struct.edge_list; [new_m, new_marking_idx]];
+            result_struct.edge_list = [result_struct.edge_list; [new_m, new_marking_idx]];
           endif
 
-          result_struct.arctrans_list = ...
-            [result_struct.arctrans_list; ent_idx];
+          result_struct.arctrans_list = [result_struct.arctrans_list; ent_idx];
         endfor
         new_list = new_list(new_list != new_marking);
       endif
@@ -102,7 +101,7 @@ function [new_markings, enabled_transitions] = enabled_sets(A1, A2, M)
   % given the current marking (tokens in each place); the marking (M) must have
   % at least as many tokens in each input place in order to be enable a
   % transition.
-  enabled_transitions = find(all(M >= A, 1));
+  enabled_transitions = find(all(M >= A1, 1));
   % Then, for each enabled transition (column), consume the input tokens (-A1)
   % and generate the output tokens (+A2).
   new_markings = M - A1(:, enabled_transitions) + A2(:, enabled_transitions);
