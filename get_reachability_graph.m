@@ -13,6 +13,8 @@
 %   arctrans_list: The set of arc transitions of the reachable graph.
 %   tran_num: The number of transitions on the Petri net.
 %   bounded: Whether the Petri net is bounded or unbouded.
+
+
 function result_struct = get_reachability_graph(petri_matrix, place_upper_limit=10, marks_upper_limit=500)
   % The number of transitions is the number of rows in either A+' or A-'
   tran_num = (rows(petri_matrix) - 1)/2;
@@ -36,7 +38,7 @@ function result_struct = get_reachability_graph(petri_matrix, place_upper_limit=
   % Continue looping while there are new markings
   while (~isempty(new_list))
     if (counter > marks_upper_limit)
-      % Possibly unbounded Petri net; a higher upper limit might prove this wrong
+      % Possibly unbounded Petri net
       result_struct.bounded = false; return
     endif
 
@@ -52,7 +54,7 @@ function result_struct = get_reachability_graph(petri_matrix, place_upper_limit=
 	  % Row vector
           t = zeros(tran_num, 1, "uint32");
           t(ent_idx) = 1;
-          marking = result_struct.v_list(:, new_marking) + dot(C, t);
+          marking = result_struct.v_list(:, new_marking) + sum(C * t, 2);
           new_marking_idx = wherevec(marking, result_struct.v_list);
           if (new_marking_idx == -1)
             counter += 1;
