@@ -1,22 +1,21 @@
-% result_struct = get_reachability_graph(petri_matrix, place_upper_limit, marks_upper_limit)
-% Obtain the reachable graph of a petri net.
-% Inputs:
-%   petri_matrix: The petri net in compound matrix for [A+';A-';M0].
-%   place_upper_limit: The maximum number of tokens in any place before the net
-%   is considered unbounded. The default value is 10.
-%   marks_upper_limit: The maximum number of markings before considering a net
-%   unbouded. The default value is 500.
-% Outputs:
-%   The results are outputed as a single structure.
-%   v_list: The set of vertices of the reachable graph.
-%   edge_list: The set of edges of the reachable graph.
-%   arctrans_list: The set of arc transitions of the reachable graph.
-%   tran_num: The number of transitions on the Petri net.
-%   bounded: Whether the Petri net is bounded or unbouded.
-
-
+## result_struct = get_reachability_graph(petri_matrix, place_upper_limit, marks_upper_limit)
+## Obtain the reachable graph of a petri net.
+## Inputs:
+##   petri_matrix: The petri net in compound matrix for [A+';A-';M0].
+##   place_upper_limit: The maximum number of tokens in any place before the net
+##   is considered unbounded. The default value is 10.
+##   marks_upper_limit: The maximum number of markings before considering a net
+##   unbouded. The default value is 500.
+## Outputs:
+##   The results are outputed as a single structure.
+##   v_list: The set of vertices of the reachable graph.
+##   edge_list: The set of edges of the reachable graph.
+##   arctrans_list: The set of arc transitions of the reachable graph.
+##   tran_num: The number of transitions on the Petri net.
+##   bounded: Whether the Petri net is bounded or unbouded.
+##
 function result_struct = get_reachability_graph(petri_matrix, place_upper_limit=10, marks_upper_limit=500)
-  % The number of transitions is the number of rows in either A+' or A-'
+  # The number of transitions is the number of rows in either A+' or A-'
   tran_num = (rows(petri_matrix) - 1)/2;
   # Tokens needed to enable a transition; they are consumed when fired
   T_in = petri_matrix(:, 1:tran_num);
@@ -35,23 +34,23 @@ function result_struct = get_reachability_graph(petri_matrix, place_upper_limit=
   result_struct.tran_num = tran_num;
   result_struct.bounded = true;
 
-  % Continue looping while there are new markings
+  # Continue looping while there are new markings
   while (~isempty(new_list))
     if (counter > marks_upper_limit)
-      % Possibly unbounded Petri net
+      # Possibly unbounded Petri net
       result_struct.bounded = false; return
     endif
 
-    % Get a random marking from the list; each column is a marking
+    # Get a random marking from the list; each column is a marking
     new_marking = new_list(:, randi(columns(new_list)));
     [new_markings, enabled_transitions] = enabled_sets(T_in, T_out, result_struct.v_list(new_marking));
     for bs = new_markings
       if (any(bs > place_upper_limit))
-	% Possibly unbounded Petri net
+	# Possibly unbounded Petri net
         result_struct.bounded = false; return;
       else
         for ent_idx = enabled_transitions
-	  % Row vector
+	  # Row vector
           t = zeros(tran_num, 1, "uint32");
           t(ent_idx) = 1;
           marking = result_struct.v_list(:, new_marking) + sum(C * t, 2);
@@ -74,37 +73,36 @@ function result_struct = get_reachability_graph(petri_matrix, place_upper_limit=
 endfunction
 
 function row_index = wherevec(row_vec, matrix)
-  % Find the index of the first row in a matrix that is equal to the given
-  % vector; if none are equal, return -1.
+  # Find the index of the first row in a matrix that is equal to the given
+  # vector; if none are equal, return -1.
   row_index = -1;
-  % Broadcasted operation
+  # Broadcasted operation; compare the row with all the rows in the matrix.
   equal_matrix = (matrix == row_vec);
-  % First, check which rows are equal to the vector, then, if any are equal
-  % get their index.
+  # Check if there are any rows in the matrix that are equal to row_vec
   if any(all(equal_matrix, 2))
+    # Return the first index that matches row_vec
     row_index = find(all(equal_matrix, 2), 1);
   endif
 endfunction
 
 function [new_markings, enabled_transitions] = enabled_sets(A1, A2, M)
-  % Given the Pre-set and the current marking, find which transitions (columns)
-  % are enabled.
-  % Inputs:
-  %   A1: The transposed Petri net pre-sets, where each column is a transition.
-  %   A2: The transposed Petri net post-sets, where each column is a transition.
-  %   M: A single vector representing the current marking; a column vector.
-  % Outputs:
-  %   new_markings: a matrix containing the new markings generated after firing
-  %   all enabled transitions; each column is a new marking.
-  %   enabled_transitions: a vector containing the index of the enabled
-  %   transitions, in the form of a row vector'.
+  # Given the Pre-set and the current marking, find which transitions (columns)
+  # are enabled.
+  # Inputs:
+  #   A1: The transposed Petri net pre-sets, where each column is a transition.
+  #   A2: The transposed Petri net post-sets, where each column is a transition.
+  #   M: A single vector representing the current marking; a column vector.
+  # Outputs:
+  #   new_markings: a matrix containing the new markings generated after firing
+  #   all enabled transitions; each column is a new marking.
+  #   enabled_transitions: a vector containing the index of the enabled
+  #   transitions; a row vector.
 
-  % First, we have to check which transitions (columns on A1) can be enabled,
-  % given the current marking (tokens in each place); the marking (M) must have
-  % at least as many tokens in each input place in order to be enable a
-  % transition.
+  # First, we have to check which transitions are enabled, given the current
+  # Petri Net marking; transitions are enabled when the number of tokens in a
+  # place is greater than or equal to the pre-set (A1). 
   enabled_transitions = find(all(M >= A1, 1));
-  % Then, for each enabled transition (column), consume the input tokens (-A1)
-  % and generate the output tokens (+A2).
+  # Then, for each enabled transition, consume the input tokens (-A1) and
+  # generate the output tokens (+A2).
   new_markings = M - A1(:, enabled_transitions) + A2(:, enabled_transitions);
 endfunction

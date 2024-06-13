@@ -1,3 +1,13 @@
+## usage: new_net = prune_petri (petri_net_matrix)
+## Given a Petri Net matrix, randomly change the connections between places and
+## transitions.
+## Inputs:
+##  petri_net_matrix: The petri net compound matrix [A+'; A-'; M0], where A+ and
+##  A- are p x n matrices, where p is the number of places and n is the number
+##  of transitions, and M0 is a tall vector with the initial marking of the net.
+## Outputs:
+##  new_net: A petri net that has 
+##
 function new_net = prune_petri(petri_net_matrix)
   new_net = del_edge(petri_net_matrix);
   new_net = add_node(new_net);
@@ -8,7 +18,7 @@ function new_net = del_edge(petri_net_matrix)
   # as it represents the net marking.
   row_totals = sum(petri_net_matrix(:, 1:end-1), 2);
   row_idxs = find(row_totals >= 3);
-  # Select sum - 2 random indexes from each row and set them to 0
+  # Select sum - 2 random indexes from each row and set them to 0.
   # Octave iterates over the columns, so we have to transpose the row_idxs
   # because it is a tall vector.
   for row = row_idxs'
