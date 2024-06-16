@@ -4,8 +4,8 @@
 %% Inputs:
 %%   pn: The number of places in the net
 %%   tn: The number of transitions in the net
-%%   prob: The probability of adding a random edge
-%%   max_lambda: the maximum value of lambda
+%%   prob: The probability of adding a random connection
+%%   max_lambda: the maximum value of lambda (1:lambda)
 %% Outputs:
 %%   cm: The compound matrix (inflows (pn x tn); outflows (pn x tn); M_0 (tn x 1))
 %%   lambda: A vector with the lambda for each transition.
