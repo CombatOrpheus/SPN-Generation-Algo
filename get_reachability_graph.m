@@ -74,7 +74,6 @@ function row_index = wherevec(row_vec, matrix)
   % Find the index of the first row in a matrix that is equal to the given
   % vector; if none are equal, return -1.
   row_index = -1;
-  % Broadcasted operation; compare the row with all the rows in the matrix.
   equal_matrix = (matrix == row_vec);
   % Check if there are any rows in the matrix that are equal to row_vec
   if any(all(equal_matrix, 2))
