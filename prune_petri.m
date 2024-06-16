@@ -14,13 +14,13 @@ function new_net = prune_petri(petri_net_matrix)
 endfunction
 
 function new_net = del_edge(petri_net_matrix)
-  # Find the rows that move at least three tokens, excluding the last column,
-  # as it represents the net marking.
+  # Find the rows that move at least three tokens. The last column represents
+  # the net marking, so we can discard it.
   row_totals = sum(petri_net_matrix(:, 1:end-1), 2);
   row_idxs = find(row_totals >= 3);
-  # Select sum - 2 random indexes from each row and set them to 0.
-  # Octave iterates over the columns, so we have to transpose the row_idxs
-  # because it is a tall vector.
+  # Select sum - 2 random indexes from each row and set them to 0 so that they
+  # only move one token. Octave iterates over columns, so we have to transpose
+  # the row_idxs since it is a column vector.
   for row = row_idxs'
     idxs = find(petri_net_matrix(row, 1:end-1) == 1);
     rm_idxs = random_choice(idxs, row_totals(row) - 2);
