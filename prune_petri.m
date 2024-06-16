@@ -41,9 +41,12 @@ endfunction
 
 function new_net = add_node(petri_net_matrix)
   column_size = (columns(petri_net_matrix) - 1)/2;
-  # Each transition must move at least one token.
-  column_idxs = find(sum(petri_net_matrix(:, 1:end-1), 1) == 0);
-  if (any(column_idxs))
+  # Each transition must move at least one token, so we need to find columns
+  # whose elements are all zero. The last column contains the marking, so we
+  # discard it.
+  column_idxs = find(all(~petri_net_matrix(:, 1:end-1), 1));
+  # If no elements match, the find function returns an empty matrix.
+  if (~isempty(column_idxs)
     choices = randi(column_size, sum(column_idxs));
     petri_net_matrix(choices, column_idxs) = 1;
   endif
@@ -51,18 +54,20 @@ function new_net = add_node(petri_net_matrix)
   tran_num = (columns(petri_net_matrix) - 1)/2;
   left_matrix = petri_net_matrix(:, 1:tran_num);
   right_matrix = petri_net_matrix(:, (tran_num + 1):(end - 1));
-  # Each row in the left matrix must move at least one token.
-  row_idxs = ~any(left_matrix, 2);
-  if (any(row_idxs))
+  # Each row in the left matrix must move at least one token, so we find the
+  # rows whose elements are all zero.
+  row_idxs = all(~left_matrix, 2);
+  if (~isempty(row_idxs))
     choices = randi(column_size, numel(row_idxs));
     left_matrix(row_idxs, choices) = 1;
   endif
-  # Each row in the right matrix must move at least one token.
-  row_idxs = ~any(right_matrix, 2);
-  if (any(row_idxs))
+  # The same thing for the right matrix.
+  row_idxs = all(~right_matrix, 2);
+  if (~isempty(row_idxs))
     choices = randi(column_size, numel(row_idxs));
     right_matrix(row_idxs, choices) = 1;
   endif
-  # Concatenate these matrices horizontaly.
+  # Concatenate these matrices horizontaly. We also need to add the initial
+  # marking back into this matrix.
   new_net = [left_matrix, right_matrix, petri_net_matrix(:, end)];
 endfunction
