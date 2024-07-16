@@ -53,8 +53,8 @@ function new_net = add_node(petri_net_matrix)
   % If we add 1 on the left, we must also add it to the right
   for row = row_idxs'
     choice = randi(num_transitions);
-    petri_net_matrix(choice, row) = 1;
-    petri_net_matrix(choice, row + num_transitions) = 1;
+    petri_net_matrix(row, choice) = 1;
+    petri_net_matrix(row + num_transitions, choice) = 1;
   endfor
 
   new_net = petri_net_matrix;
