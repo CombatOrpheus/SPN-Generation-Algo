@@ -15,21 +15,19 @@ endfunction
 
 function new_net = del_edge(petri_net_matrix)
   % Find places that are connected to at least three transitions
-  row_totals = sum(petri_net_matrix(:, 1:end-1), 2);
-  row_idxs = find(row_totals >= 3);
+  valid_rows = sum(petri_net_matrix(:, 1:end-1), 2);
+  row_idxs = find(valid_rows >= 3);
   % Make it so the place is only connected to a single transition.
-  % Octave iterates over columns, so we have to transpose the row_idxs since it
-  % is a column vector.
+  % Octave iterates over columns, so we have to transpose the row_idxs
   for row = row_idxs'
     idxs = find(petri_net_matrix(row, 1:end-1) == 1);
-    rm_idxs = random_choice(idxs, row_totals(row) - 2);
+    rm_idxs = random_choice(idxs, valid_rows(row) - 2);
     petri_net_matrix(row, rm_idxs) = 0;
   endfor
 
   % Do the same process for transitions
   column_totals = sum(petri_net_matrix(:, 1:end-1), 1);
   column_idxs = find(column_totals >= 3);
-  % column_idxs is already a row vector, so there is no need to transpose it.
   for column = column_idxs
     idxs = find(petri_net_matrix(:, column) == 1);
     rm_idxs = random_choice(idxs, column_totals(column) - 2);
@@ -52,9 +50,9 @@ function new_net = add_node(petri_net_matrix)
   row_idxs = find(all(petri_net_matrix == 0, 2));
   % If we add 1 on the left, we must also add it to the right
   for row = row_idxs'
-    choice = randi(num_transitions);
-    petri_net_matrix(row, choice) = 1;
-    petri_net_matrix(row + num_transitions, choice) = 1;
+    choice = randi(num_transitions, 2, 1);
+    petri_net_matrix(row, choice(1)) = 1;
+    petri_net_matrix(row + num_transitions, choice(2)) = 1;
   endfor
 
   new_net = petri_net_matrix;
