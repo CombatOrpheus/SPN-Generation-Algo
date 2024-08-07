@@ -10,7 +10,7 @@
 %%   cm: The compound matrix (inflows (pn x tn); outflows (pn x tn); M_0 (tn x 1))
 %%   lambda: A vector with the lambda for each transition.
 function [cm, lambda] = spn_generate_random(pn, tn, prob, max_lambda)
-  cm = zeros(pn, 2*tn + 1, "uint32");
+  cm = zeros(pn, 2*tn + 1, "int32");
   places = [1:pn]';
   transitions = [1:tn]' + pn;
 
@@ -30,7 +30,7 @@ function [cm, lambda] = spn_generate_random(pn, tn, prob, max_lambda)
   endif
 
   % A simple permutation is equivalent to a series of random choices; the former
-  % is also faster in Octave, so that's what we will use.  
+  % is also faster in Octave, so that's what we will use.
   remaining_nodes = remaining_nodes(remaining_nodes != pi & remaining_nodes != tj);
   node_choices = randperm(remaining_nodes);
 
