@@ -24,21 +24,35 @@ function result = filter_spn (petri_matrix, place_upper_bound=10, marks_lower_li
   result.valid = true;
 endfunction
 
+function [mark_densitiy_list, my_mark_numbers] = average_marks_number (v_list, steady_state_probabilities)
+  % Transform the matrix into a row vector and get the unique elements
+  token_list = unique(reshape(v_list, 1, []));
+  mark_density_list = zeros(columns(v_list), columns(token_list), "uint32");
+
+  for place_index = 1:columns(v_list)
+    unique_tokens = unique(:, place_index);
+    token_locations = find(token_list == unique_tokens):
+    pipeitok_index = find(v_list(:, place_index) == unique_tokens);
+    mark_density_list(place_index, token_locations) = sum(steady_state_probabilities(pipeitok_index), axis=2);
+  endfor
+
+  mu_mark_numbers = sum(mark_density_list * token_list, axis=1);
+endfunction
+
+
 function bool = is_connected_graph (petri_matrix)
   bool = false;
   % The last column is the current marking of the Petri net, so we can remove it
   petri_matrix = petri_matrix(:, 1:end-1)
   transition_number = (columns(petri_matrix) - 1)/2;
   % If, for a given place, no transitions change its contents, the graph is not
-  % connected. Here, we sum over the rows of the matrix and then invert the
-  % resulting vector so that the any function can detect rows that summed to
-  % zero.
+  % connected. In this case, transitions are rows, and we are searching for zeros.
   any(~sum(petri_matrix, 2)) && return;
   % Likewise, if a transition does not change the values of any places, the
-  % graph is not connected. For this, we sum over the columns of the matrix, and
-  % then sum 1:transition_number columns with transition_number:end to get the
-  % changes for each transition.
+  % graph is not connected. Since we are using a compound matrix, we can sum the
+  % pre and post-conditions.
   column_sum = sum(petri_matrix, 1);
-  any(~(column_sum(1:transition_number) + column_sum(transition_number:end))) && return;
+  incidence_ = column_sum(1:transition_number) + column_sum(transition_number+1:end)
+  any(~incidence) && return;
   bool = true;
 endfunction
