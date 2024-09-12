@@ -42,18 +42,19 @@ endfunction
 
 function bool = is_connected_graph (petri_matrix)
   bool = false;
-  % The last column is the current marking of the Petri net, so we can remove it
   petri_matrix = petri_matrix(:, 1:end-1)
   transition_number = (columns(petri_matrix) - 1)/2;
-  % If, for a given place, no transitions change its contents, the graph is not
-  % connected. In this case, transitions are rows, and we are searching for zeros.
-  any(~sum(petri_matrix, 2)) && return;
-  % Likewise, if a transition does not change the values of any places, the
-  % graph is not connected. Since we are using a compound matrix, we can sum the
-  % pre and post-conditions.
+
+  if  any(~sum(petri_matrix, 2))
+    return;
+  endif
+
   column_sum = sum(petri_matrix, 1);
   incidence_ = column_sum(1:transition_number) + column_sum(transition_number+1:end)
-  any(~incidence) && return;
+  if any(~incidence)
+    return;
+  endif
+
   bool = true;
 endfunction
 
@@ -71,4 +72,22 @@ function [state_matrix, y_list] = state_equation(v_list, edge_list, arctrans_lis
   end
 
   state_matrix = [redundant_state_matrix(1:end-1, :); redundant_state_matrix(end, :)];
+end
+
+function [sv, mark_dens_list, mu_mark_nums, labda] = generate_sgn(v_list, edge_list, arctrans_list, tran_num)
+  lambda = randi(10, tran_num, 1);
+  [state_matrix, y_list] = state_equation_octave(v_list, edge_list, arctrans_list, labda);
+
+  # Solve for steady-state vector
+  try
+    sv = state_matrix \ y_list;
+  catch
+    sv = [];
+    mark_dens_list = [];
+    mu_mark_nums = [];
+  end
+
+  if ~isempty(sv)
+    [mark_dens_list, mu_mark_nums] = avg_mark_nums(v_list, sv);
+  end
 end
