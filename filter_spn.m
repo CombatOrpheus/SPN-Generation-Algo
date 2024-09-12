@@ -56,3 +56,19 @@ function bool = is_connected_graph (petri_matrix)
   any(~incidence) && return;
   bool = true;
 endfunction
+
+function [state_matrix, y_list] = state_equation(v_list, edge_list, arctrans_list, lambda)
+  m_num = length(v_list);
+  redundant_state_matrix = zeros(m_num + 1, m_num);
+  y_list = zeros(m_num, 1);
+  y_list(end) = 1;
+  redundant_state_matrix(end, :) = 1;
+
+  for ed_idx = 1:length(edge_list)
+    pb_idx = int(arctrans_list(ed_idx));
+    redundant_state_matrix(edge_list(ed_idx, 1), edge_list(ed_idx, 1)) -= lambda(pb_idx);
+    redundant_state_matrix(edge_list(ed_idx, 2), edge_list(ed_idx, 1)) += lambda(pb_idx);
+  end
+
+  state_matrix = [redundant_state_matrix(1:end-1, :); redundant_state_matrix(end, :)];
+end
