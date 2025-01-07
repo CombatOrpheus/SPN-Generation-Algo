@@ -21,11 +21,11 @@ function result_struct = get_reachability_graph(petri_matrix, place_upper_limit=
   T_in = petri_matrix(:, 1:tran_num);
   % Tokens produced when a transition is fired
   T_out = petri_matrix(:, (tran_num+1):end-1);
-  % The initial marking of the Petri Net
+  % The initial marking
   M0 = petri_matrix(:, end);
   counter = 1;
   new_list = [1];
- % Construct the Incidence matrix; firing a transition
+
   C = T_out - T_in;
   result_struct.v_list = [M0];
   result_struct.edge_list = [];
@@ -67,11 +67,10 @@ function result_struct = get_reachability_graph(petri_matrix, place_upper_limit=
 endfunction
 
 function col_index = wherevec(col_vec, matrix)
-  % Find the index of the first column in a matrix that is equal to the given
-  % vector; if none are equal, return -1.
+  % Find the index of the first column in matrix equal to vector
   col_index = -1;
   equal_matrix = (matrix == col_vec);
-  % Check if there are any columns in the matrix that are equal to col_vec
+
   if any(all(equal_matrix, 1))
     % Return the first index that matches col_vec
     col_index = find(all(equal_matrix, 2), 1);
@@ -79,8 +78,7 @@ function col_index = wherevec(col_vec, matrix)
 endfunction
 
 function [new_markings, enabled_transitions] = enabled_sets(pre_set, post_set, M)
-  % Given the Pre-set and the current marking, find which transitions (columns)
-  % are enabled.
+  % Find which transitions (columns) are enabled.
   enabled_transitions = find(all(M >= pre_set, 1));
   new_markings = M - pre_set(:, enabled_transitions) + post_set(:, enabled_transitions);
 endfunction
