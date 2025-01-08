@@ -17,30 +17,24 @@
 function result_struct = get_reachability_graph(petri_matrix, place_upper_limit=10, marks_upper_limit=500)
   % The number of transitions is the number of rows in either A+' or A-'
   tran_num = (columns(petri_matrix) - 1)/2;
-  % Tokens consumed when a transition is fired
-  T_in = petri_matrix(:, 1:tran_num);
-  % Tokens produced when a transition is fired
-  T_out = petri_matrix(:, (tran_num+1):end-1);
-  % The initial marking
-  M0 = petri_matrix(:, end);
+  T_in = petri_matrix(:, 1:tran_num);           % Tokens consumed when firing
+  T_out = petri_matrix(:, (tran_num+1):end-1);  % Tokens produced when firing
+  M0 = petri_matrix(:, end);                    % Initial Marking
   counter = 1;
   new_list = [1];
+  C = T_out - T_in;                             % Incidence Matrix
 
-  C = T_out - T_in;
   result_struct.v_list = [M0];
   result_struct.edge_list = [];
   result_struct.arctrans_list = [];
   result_struct.bounded = true;
-
-  % Continue looping while there are new markings
+  % Loop while there are new markings to explore
   while (~isempty(new_list))
     if (counter > marks_upper_limit) % Possibly unbounded Petri net
       result_struct.bounded = false; return
     endif
-
     % Get a random marking from the list; each column is a marking
-    num_rows = rows(new_list);
-    choice = randi(num_rows);
+    choice = randi(rows(new_list));
     idx = new_list(choice);
     [new_markings, enabled_transitions] = enabled_sets(T_in, T_out, result_struct.v_list(:, idx));
     new_list(choice) = [];
@@ -49,8 +43,10 @@ function result_struct = get_reachability_graph(petri_matrix, place_upper_limit=
         result_struct.bounded = false; return;
       else
         for ent_idx = enabled_transitions
+	  % Compute the value of the new marking after firing a transition
           marking = result_struct.v_list(:, choice) + C(:, ent_idx);
           new_marking_idx = wherevec(marking, result_struct.v_list);
+	  % If marking has not been seen before, take note of it
           if (new_marking_idx == -1)
             counter += 1;
             result_struct.v_list = [result_struct.v_list, marking];
@@ -66,19 +62,19 @@ function result_struct = get_reachability_graph(petri_matrix, place_upper_limit=
   endwhile
 endfunction
 
+%% col_index = wherevec(col_vec, matrix)
+%% Returns the index of the first column in the matrix that is equal to vector
 function col_index = wherevec(col_vec, matrix)
-  % Find the index of the first column in matrix equal to vector
   col_index = -1;
-  equal_matrix = (matrix == col_vec);
-
-  if any(all(equal_matrix, 1))
-    % Return the first index that matches col_vec
+  column_equal_to_vector = all(matrix == col_vec, 1);
+  if any(column_equal_to_vector)
     col_index = find(all(equal_matrix, 2), 1);
   endif
 endfunction
 
+%% [new_markings, enabled_transitions] = enabled_sets(pre_set, post_set, M)
+%% Given the current marking, find which transitions are enabled
 function [new_markings, enabled_transitions] = enabled_sets(pre_set, post_set, M)
-  % Find which transitions (columns) are enabled.
   enabled_transitions = find(all(M >= pre_set, 1));
   new_markings = M - pre_set(:, enabled_transitions) + post_set(:, enabled_transitions);
 endfunction
