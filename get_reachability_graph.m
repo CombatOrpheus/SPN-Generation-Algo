@@ -1,80 +1,123 @@
 %% result_struct = get_reachability_graph(petri_matrix, place_upper_limit, marks_upper_limit)
-%% Obtain the reachable graph of a petri net.
-%% Inputs:
-%%   petri_matrix: The petri net in compound matrix for [A+';A-';M0].
-%%   place_upper_limit: The maximum number of tokens in any place before the net
-%%   is considered unbounded. The default value is 10.
-%%   marks_upper_limit: The maximum number of markings before considering a net
-%%   unbouded. The default value is 500.
-%% Outputs:
-%%   The results are outputed as a single structure.
-%%   v_list: The set of vertices of the reachable graph.
-%%   edge_list: The set of edges of the reachable graph.
-%%   arctrans_list: The set of arc transitions of the reachable graph.
-%%   tran_num: The number of transitions on the Petri net.
-%%   bounded: Whether the Petri net is bounded or unbouded.
 %%
+%% Computes the reachability graph of a Stochastic Petri Net (SPN).
+%%
+%% A reachability graph represents all possible states (markings) that a
+%% Petri net can reach from its initial marking by firing transitions. Each node
+%% in the graph is a marking, and an edge represents a transition firing that
+%% leads from one marking to another.
+%%
+%% This function explores the state space of the SPN starting from the initial
+%% marking M0. It checks for unboundedness by limiting the number of tokens
+%% per place and the total number of markings explored.
+%%
+%% Inputs:
+%%   petri_matrix: The compound matrix representing the SPN. This is a
+%%                 pn x (2*tn + 1) matrix with the structure:
+%%                 [T_in, T_out, M0], where T_in is the pre-incidence matrix,
+%%                 T_out is the post-incidence matrix, and M0 is the initial marking.
+%%   place_upper_limit: (Optional) The maximum number of tokens allowed in any
+%%                      single place. If exceeded, the net is considered unbounded.
+%%                      Default: 10.
+%%   marks_upper_limit: (Optional) The maximum number of unique markings to explore.
+%%                      If exceeded, the net is considered unbounded. Default: 500.
+%%
+%% Outputs:
+%%   result_struct: A structure containing the results of the analysis.
+%%     .v_list: A matrix where each column is a unique marking (vertex) found.
+%%     .edge_list: An m x 2 matrix representing the edges of the graph, where m
+%%                 is the number of transitions between markings. Each row is
+%%                 [source_marking_idx, dest_marking_idx].
+%%     .arctrans_list: A list of transitions corresponding to each edge in edge_list.
+%%     .bounded: A boolean flag, true if the net is considered bounded within the
+%%               given limits, false otherwise.
+
 function result_struct = get_reachability_graph(petri_matrix, place_upper_limit=10, marks_upper_limit=500)
-  % The number of transitions is the number of rows in either A+' or A-'
-  tran_num = (columns(petri_matrix) - 1)/2;
-  T_in = petri_matrix(:, 1:tran_num);           % Tokens consumed when firing
-  T_out = petri_matrix(:, (tran_num+1):end-1);  % Tokens produced when firing
-  M0 = petri_matrix(:, end);                    % Initial Marking
-  counter = 1;
-  new_list = [1];
-  C = T_out - T_in;                             % Incidence Matrix
+  % --- 1. Deconstruct the input compound matrix ---
+  num_places = rows(petri_matrix);
+  num_transitions = (columns(petri_matrix) - 1) / 2;
+  T_in = petri_matrix(:, 1:num_transitions);
+  T_out = petri_matrix(:, (num_transitions+1):end-1);
+  M0 = petri_matrix(:, end);
+  C = T_out - T_in;
 
-  result_struct.v_list = [M0];
-  result_struct.edge_list = [];
-  result_struct.arctrans_list = [];
+  % --- 2. Initialize data structures for the graph search ---
+  new_markings_list = [1];
+  markings_count = 1;
+  edge_count = 0;
+
+  % Use a hash map for efficient lookup of seen markings.
+  markings_map = containers.Map();
+  m0_key = sprintf('%d;', M0);
+  markings_map(m0_key) = 1;
+
+  % Pre-allocate memory for performance.
+  prealloc_size = min(marks_upper_limit, 1000);
+  v_list = zeros(num_places, prealloc_size);
+  edge_list = zeros(prealloc_size * 5, 2); % Guessing 5 edges per marking on avg.
+  arctrans_list = zeros(prealloc_size * 5, 1);
+
+  v_list(:, 1) = M0;
   result_struct.bounded = true;
-  % Loop while there are new markings to explore
-  while (~isempty(new_list))
-    if (counter > marks_upper_limit) % Possibly unbounded Petri net
-      result_struct.bounded = false; return
+
+  % --- 3. Explore the state space to build the reachability graph ---
+  while (~isempty(new_markings_list))
+    if (markings_count > marks_upper_limit)
+      result_struct.bounded = false;
+      break; % Exit loop, then trim matrices.
     endif
-    % Get a random marking from the list; each column is a marking
-    choice = randi(rows(new_list));
-    idx = new_list(choice);
-    [new_markings, enabled_transitions] = enabled_sets(T_in, T_out, result_struct.v_list(:, idx));
-    new_list(choice) = [];
-    for bs = new_markings
-      if (any(bs > place_upper_limit)) % Possibly unbounded Petri net
-        result_struct.bounded = false; return;
-      else
-        for ent_idx = enabled_transitions
-	  % Compute the value of the new marking after firing a transition
-          marking = result_struct.v_list(:, choice) + C(:, ent_idx);
-          new_marking_idx = wherevec(marking, result_struct.v_list);
-	  % If marking has not been seen before, take note of it
-          if (new_marking_idx == -1)
-            counter += 1;
-            result_struct.v_list = [result_struct.v_list, marking];
-            new_list = [new_list, counter];
-            result_struct.edge_list = [result_struct.edge_list; [idx, counter]];
-          else
-            result_struct.edge_list = [result_struct.edge_list; [idx, new_marking_idx]];
-          endif
-          result_struct.arctrans_list = [result_struct.arctrans_list; ent_idx];
-        endfor
+
+    current_marking_idx = new_markings_list(1);
+    new_markings_list(1) = [];
+    current_marking = v_list(:, current_marking_idx);
+
+    enabled_transitions = find(all(current_marking >= T_in, 1));
+
+    for trans_idx = enabled_transitions
+      next_marking = current_marking + C(:, trans_idx);
+
+      if (any(next_marking > place_upper_limit))
+        result_struct.bounded = false;
+        break; % Exit inner loop
       endif
+
+      % Check if this `next_marking` has been seen before using the hash map.
+      next_marking_key = sprintf('%d;', next_marking);
+      if ~isKey(markings_map, next_marking_key)
+        % This is a new, unseen marking.
+        markings_count += 1;
+
+        % Resize v_list if needed
+        if markings_count > columns(v_list)
+            v_list = [v_list, zeros(num_places, columns(v_list))];
+        endif
+
+        next_marking_idx = markings_count;
+        markings_map(next_marking_key) = next_marking_idx;
+        v_list(:, next_marking_idx) = next_marking;
+        new_markings_list = [new_markings_list, next_marking_idx];
+      else
+        % The marking has been seen before. Get its index from the map.
+        next_marking_idx = markings_map(next_marking_key);
+      endif
+
+      edge_count += 1;
+      % Resize edge lists if needed
+      if edge_count > rows(edge_list)
+          edge_list = [edge_list; zeros(rows(edge_list), 2)];
+          arctrans_list = [arctrans_list; zeros(rows(arctrans_list), 1)];
+      endif
+
+      % Add an edge to the graph.
+      edge_list(edge_count, :) = [current_marking_idx, next_marking_idx];
+      arctrans_list(edge_count) = trans_idx;
     endfor
+    if ~result_struct.bounded, break; end % Exit outer loop
   endwhile
-endfunction
 
-%% col_index = wherevec(col_vec, matrix)
-%% Returns the index of the first column in the matrix that is equal to vector
-function col_index = wherevec(col_vec, matrix)
-  col_index = -1;
-  column_equal_to_vector = all(matrix == col_vec, 1);
-  if any(column_equal_to_vector)
-    col_index = find(all(equal_matrix, 2), 1);
-  endif
-endfunction
-
-%% [new_markings, enabled_transitions] = enabled_sets(pre_set, post_set, M)
-%% Given the current marking, find which transitions are enabled
-function [new_markings, enabled_transitions] = enabled_sets(pre_set, post_set, M)
-  enabled_transitions = find(all(M >= pre_set, 1));
-  new_markings = M - pre_set(:, enabled_transitions) + post_set(:, enabled_transitions);
+  % --- 4. Finalize results ---
+  % Trim the pre-allocated matrices to their actual size.
+  result_struct.v_list = v_list(:, 1:markings_count);
+  result_struct.edge_list = edge_list(1:edge_count, :);
+  result_struct.arctrans_list = arctrans_list(1:edge_count);
 endfunction
