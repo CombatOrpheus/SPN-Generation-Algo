@@ -3,11 +3,6 @@
 %% Given a marking M, finds which transitions are enabled and computes the
 %% resulting new markings.
 %%
-%% NOTE: This function is not used by the current version of
-%% `get_reachability_graph.m` (as of 2025-08-09), as the logic has been
-%% integrated directly into the main loop for clarity. It is kept here for
-%% reference.
-%%
 %% A transition is enabled if the current marking M has enough tokens in all
 %% of its input places.
 %%

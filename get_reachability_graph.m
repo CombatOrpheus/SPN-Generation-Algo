@@ -34,91 +34,90 @@
 
 function result_struct = get_reachability_graph(petri_matrix, place_upper_limit=10, marks_upper_limit=500)
   % --- 1. Deconstruct the input compound matrix ---
+  num_places = rows(petri_matrix);
   num_transitions = (columns(petri_matrix) - 1) / 2;
-
-  % T_in (A-): Matrix showing tokens consumed by transitions.
-  % Rows are places, columns are transitions. T_in(i, j) = 1 means transition j consumes a token from place i.
   T_in = petri_matrix(:, 1:num_transitions);
-
-  % T_out (A+): Matrix showing tokens produced by transitions.
-  % T_out(i, j) = 1 means transition j produces a token for place i.
   T_out = petri_matrix(:, (num_transitions+1):end-1);
-
-  % M0: The initial marking (state) of the Petri net.
-  % A column vector where M0(i) is the number of tokens in place i.
   M0 = petri_matrix(:, end);
-
-  % C: The incidence matrix, C = T_out - T_in.
-  % It represents the net change in tokens for each place when a transition fires.
   C = T_out - T_in;
 
   % --- 2. Initialize data structures for the graph search ---
-  % A list of indices of markings that are new and need to be explored.
   new_markings_list = [1];
-  % A counter for the total number of unique markings found so far.
   markings_count = 1;
+  edge_count = 0;
 
-  % Initialize the result structure.
-  result_struct.v_list = [M0]; % The list of unique markings (vertices). Start with M0.
-  result_struct.edge_list = []; % The list of edges between markings.
-  result_struct.arctrans_list = []; % The list of transitions for each edge.
+  % Use a hash map for efficient lookup of seen markings.
+  markings_map = containers.Map();
+  m0_key = sprintf('%d;', M0);
+  markings_map(m0_key) = 1;
+
+  % Pre-allocate memory for performance.
+  prealloc_size = min(marks_upper_limit, 1000);
+  v_list = zeros(num_places, prealloc_size);
+  edge_list = zeros(prealloc_size * 5, 2); % Guessing 5 edges per marking on avg.
+  arctrans_list = zeros(prealloc_size * 5, 1);
+
+  v_list(:, 1) = M0;
   result_struct.bounded = true;
 
-  % NOTE on performance: The lists above are grown inside the loop, which can be
-  % inefficient in Octave/MATLAB. For better performance with large graphs,
-  % pre-allocating these matrices would be a good optimization.
-
   % --- 3. Explore the state space to build the reachability graph ---
-  % The loop continues as long as there are new markings to explore.
   while (~isempty(new_markings_list))
-    % Check if the number of markings exceeds the limit.
     if (markings_count > marks_upper_limit)
       result_struct.bounded = false;
-      return;
+      break; % Exit loop, then trim matrices.
     endif
 
-    % Select a marking to explore from the list of new markings.
-    % We process them in order (FIFO), making this a Breadth-First Search.
     current_marking_idx = new_markings_list(1);
-    new_markings_list(1) = []; % Remove it from the "to explore" list.
-    current_marking = result_struct.v_list(:, current_marking_idx);
+    new_markings_list(1) = [];
+    current_marking = v_list(:, current_marking_idx);
 
-    % Find which transitions are enabled for the current marking.
-    % A transition 'j' is enabled if the current marking has enough tokens
-    % in all of its input places (i.e., M(i) >= T_in(i, j) for all places 'i').
     enabled_transitions = find(all(current_marking >= T_in, 1));
 
-    % For each enabled transition, compute the next marking.
     for trans_idx = enabled_transitions
-      % Firing a transition: M_new = M_current + C*t
-      % where t is a vector with a 1 at the position of the fired transition.
-      % This is equivalent to: M_new = M_current - T_in + T_out
       next_marking = current_marking + C(:, trans_idx);
 
-      % Check if the new marking exceeds the token limit per place.
       if (any(next_marking > place_upper_limit))
         result_struct.bounded = false;
-        return;
+        break; % Exit inner loop
       endif
 
-      % Check if this `next_marking` has been seen before.
-      next_marking_idx = wherevec(next_marking, result_struct.v_list);
-
-      if (next_marking_idx == -1)
+      % Check if this `next_marking` has been seen before using the hash map.
+      next_marking_key = sprintf('%d;', next_marking);
+      if ~isKey(markings_map, next_marking_key)
         % This is a new, unseen marking.
         markings_count += 1;
-        next_marking_idx = markings_count;
 
-        % Add it to the list of vertices (unique markings).
-        result_struct.v_list = [result_struct.v_list, next_marking];
-        % Add its index to the list of markings to be explored.
+        % Resize v_list if needed
+        if markings_count > columns(v_list)
+            v_list = [v_list, zeros(num_places, columns(v_list))];
+        endif
+
+        next_marking_idx = markings_count;
+        markings_map(next_marking_key) = next_marking_idx;
+        v_list(:, next_marking_idx) = next_marking;
         new_markings_list = [new_markings_list, next_marking_idx];
+      else
+        % The marking has been seen before. Get its index from the map.
+        next_marking_idx = markings_map(next_marking_key);
       endif
 
-      % Add an edge to the graph from the current marking to the next one.
-      result_struct.edge_list = [result_struct.edge_list; [current_marking_idx, next_marking_idx]];
-      % Record which transition corresponds to this edge.
-      result_struct.arctrans_list = [result_struct.arctrans_list; trans_idx];
+      edge_count += 1;
+      % Resize edge lists if needed
+      if edge_count > rows(edge_list)
+          edge_list = [edge_list; zeros(rows(edge_list), 2)];
+          arctrans_list = [arctrans_list; zeros(rows(arctrans_list), 1)];
+      endif
+
+      % Add an edge to the graph.
+      edge_list(edge_count, :) = [current_marking_idx, next_marking_idx];
+      arctrans_list(edge_count) = trans_idx;
     endfor
+    if ~result_struct.bounded, break; end % Exit outer loop
   endwhile
+
+  % --- 4. Finalize results ---
+  % Trim the pre-allocated matrices to their actual size.
+  result_struct.v_list = v_list(:, 1:markings_count);
+  result_struct.edge_list = edge_list(1:edge_count, :);
+  result_struct.arctrans_list = arctrans_list(1:edge_count);
 endfunction

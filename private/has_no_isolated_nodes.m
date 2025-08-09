@@ -6,9 +6,6 @@
 %% also has no input or output arcs. This is a necessary, but not sufficient,
 %% condition for a graph to be strongly connected.
 %%
-%% NOTE: This function was originally named `is_connected_graph`, but this
-%% name was misleading as it does not perform a full connectivity analysis.
-%%
 %% Inputs:
 %%   petri_matrix: The compound matrix of the SPN.
 %%

@@ -6,8 +6,6 @@
 %% markings in the reachability graph. From this, it derives other metrics like
 %% marking density and the average number of tokens.
 %%
-%% NOTE: This function was originally named `generate_sgn`.
-%%
 %% Inputs:
 %%   reachability_graph: The reachability graph structure from get_reachability_graph.
 %%   num_transitions: The total number of transitions in the SPN.
