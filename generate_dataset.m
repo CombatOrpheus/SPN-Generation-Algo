@@ -76,64 +76,114 @@ function generate_dataset(pn_range, tn_range, states_bins, spns_per_bin, output_
   disp(['Total SPNs to generate: ' num2str(total_spns_required)]);
 
   % --- 3. Main Generation Loop ---
+  % Load the parallel package
+  pkg load parallel;
+
+  % Define batch size, e.g., based on the number of available cores.
+  % We generate more SPNs than needed in each batch because many will be invalid.
+  batch_size = nproc() * 5;
+  disp(['Using batch size: ' num2str(batch_size)]);
+
+  % This cell array will hold the final, valid SPNs before they are saved.
+  valid_spns = {};
+
   % Continue until the required number of SPNs have been generated.
   while total_spns_generated < total_spns_required
-      % Randomly select parameters for this iteration.
-      pn = randi(pn_range);
-      tn = randi(tn_range);
+    % Generate a batch of SPNs in parallel.
+    batch_results = cell(1, batch_size);
+    parfor i = 1:batch_size
+        % Randomly select parameters for this iteration.
+        pn = randi(pn_range);
+        tn = randi(tn_range);
 
-      % Generate a random SPN. Using default values for prob and max_lambda.
-      % These could be exposed as arguments in a future version.
-      prob = 0.5;
-      max_lambda = 10;
-      [cm, ~] = spn_generate_random(pn, tn, prob, max_lambda);
+        % Generate a random SPN. Using default values.
+        prob = 0.5;
+        max_lambda = 10;
+        [cm, ~] = spn_generate_random(pn, tn, prob, max_lambda);
 
-      % Run the filter and analysis.
-      % Using default values for the filter limits.
-      filter_result = filter_spn(cm);
+        % Run the filter and analysis and store the result.
+        batch_results{i} = filter_spn(cm);
+    endparfor % End of parallel batch generation
 
-      % Check if the generated SPN is valid.
-      if filter_result.valid
-          num_states = columns(filter_result.reachability_graph_vertices);
-          s_idx = get_state_bin_index(num_states, states_bins);
+    % --- Serial Processing of the Batch ---
+    % Now, iterate through the generated batch and check which SPNs
+    % can be added to our dataset.
+    for i = 1:numel(batch_results)
+      filter_result = batch_results{i};
 
-          % Construct the key for the bin this SPN belongs to.
-          bin_key = sprintf('p%d_t%d_s%d', pn, tn, s_idx);
-
-          % Check if this bin is already full.
-          if isKey(bin_counts, bin_key) && bin_counts(bin_key) < spns_per_bin
-              % This is a useful SPN that fits into a bin we need.
-
-              % Increment counts.
-              bin_counts(bin_key) += 1;
-              total_spns_generated += 1;
-
-              % Save the valid SPN data to its own HDF5 file.
-              filename = sprintf('spn_%d.h5', total_spns_generated);
-              filepath = fullfile(output_dir, filename);
-
-              % The '-hdf5' flag specifies the format. The 'filter_result' struct
-              % containing all the SPN's data is saved.
-              save('-hdf5', filepath, 'filter_result');
-
-              % Add the details of this SPN to our metadata list.
-              metadata{end+1} = {filename, pn, tn, num_states};
-
-              % Report progress to the console.
-              progress_percent = (total_spns_generated / total_spns_required) * 100;
-              disp(sprintf('Progress: %.2f%% (%d / %d) - Found SPN for bin (p=%d, t=%d, s_idx=%d). Bin count: %d/%d', ...
-                  progress_percent, total_spns_generated, total_spns_required, ...
-                  pn, tn, s_idx, bin_counts(bin_key), spns_per_bin));
-          endif
+      if !isstruct(filter_result) || !isfield(filter_result, 'valid')
+        continue;
       endif
+
+      if filter_result.valid
+        % Derive pn and tn from the incidence matrix
+        pn = rows(filter_result.petri_net);
+        tn = (columns(filter_result.petri_net) - 1) / 2;
+
+        num_states = columns(filter_result.reachability_graph_vertices);
+        s_idx = get_state_bin_index(num_states, states_bins);
+
+        % Construct the key for the bin this SPN belongs to.
+        bin_key = sprintf('p%d_t%d_s%d', pn, tn, s_idx);
+
+        % Check if this bin is defined and not yet full.
+        if isKey(bin_counts, bin_key) && bin_counts(bin_key) < spns_per_bin
+          % This is a useful SPN that fits into a bin we need.
+
+          % Increment counts.
+          bin_counts(bin_key) += 1;
+          total_spns_generated += 1;
+
+          % Add the SPN data to our master list for later saving.
+          valid_spns{end+1} = filter_result;
+
+          % The "filename" will now be a key in the consolidated HDF5 file.
+          spn_key = sprintf('spn_%d', total_spns_generated);
+
+          % Add the details of this SPN to our metadata list.
+          metadata{end+1} = {spn_key, pn, tn, num_states};
+
+          % Report progress to the console.
+          progress_percent = (total_spns_generated / total_spns_required) * 100;
+          disp(sprintf('Progress: %.2f%% (%d / %d) - Found SPN for bin (p=%d, t=%d, s_idx=%d). Bin count: %d/%d', ...
+              progress_percent, total_spns_generated, total_spns_required, ...
+              pn, tn, s_idx, bin_counts(bin_key), spns_per_bin));
+        endif
+      endif
+
+      % If we've collected enough SPNs, we can stop processing this batch.
+      if total_spns_generated >= total_spns_required
+        break; % Exit the serial processing loop
+      endif
+    endfor
   endwhile
 
-  % --- 4. Save Metadata ---
+  % --- 4. Save Consolidated Dataset and Metadata ---
+  disp('Consolidating generated SPNs for saving...');
+
+  % Create a single struct where each field is a valid SPN.
+  % The field name will be the key (e.g., 'spn_1').
+  all_spns_struct = struct();
+  for i = 1:length(valid_spns)
+      spn_key = metadata{i}{1};
+      all_spns_struct.(spn_key) = valid_spns{i};
+  endfor
+
+  % Save the consolidated struct to a single HDF5 file.
+  % The '-struct' option saves each field as a separate dataset.
+  disp('Saving SPN data to consolidated HDF5 file...');
+  h5_filepath = fullfile(output_dir, 'spn_dataset.h5');
+  if exist(h5_filepath, 'file')
+    delete(h5_filepath); % Ensure we start with a fresh file
+  endif
+  save('-hdf5', h5_filepath, '-struct', 'all_spns_struct');
+
+  % --- Save Metadata to CSV ---
   disp('Saving metadata...');
   metadata_filepath = fullfile(output_dir, 'metadata.csv');
   fid = fopen(metadata_filepath, 'w');
   % Write header
-  fprintf(fid, 'filename,places,transitions,states\n');
+  fprintf(fid, 'spn_key,places,transitions,states\n'); % Changed 'filename' to 'spn_key'
   % Write data rows
   for i = 1:length(metadata)
       fprintf(fid, '%s,%d,%d,%d\n', metadata{i}{1}, metadata{i}{2}, metadata{i}{3}, metadata{i}{4});
