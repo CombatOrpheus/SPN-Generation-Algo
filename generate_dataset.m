@@ -95,7 +95,18 @@ function generate_dataset_impl(pn_range, tn_range, states_bins, spns_per_bin, ou
   tn_values = tn_range(1):tn_range(2);
   num_state_bins = length(states_bins) + 1;
 
-  bin_counts = containers.Map();
+  try
+    bin_counts = containers.Map();
+  catch ME
+    if strcmp(ME.identifier, 'Octave:undefined-function')
+      error(['`containers.Map` is not available. This is likely because the `struct` package is not loaded.\n' ...
+             'Please run `pkg load struct` in your Octave session before calling this function.\n' ...
+             'If the package is not installed, run `pkg install -forge struct` first.']);
+    else
+      rethrow(ME);
+    endif
+  end_try_catch
+
   total_bins = 0;
   for p = pn_values
       for t = tn_values
