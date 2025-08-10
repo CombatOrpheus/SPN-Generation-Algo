@@ -120,7 +120,7 @@ function generate_dataset_impl(pn_range, tn_range, states_bins, spns_per_bin, ou
 
   total_spns_required = total_bins * spns_per_bin;
   total_spns_generated = 0;
-  metadata = {};
+  binned_spns = containers.Map();
 
   disp(['Target: ' num2str(spns_per_bin) ' SPNs for each of the ' num2str(total_bins) ' bins.']);
   disp(['Total SPNs to generate: ' num2str(total_spns_required)]);
@@ -143,10 +143,13 @@ function generate_dataset_impl(pn_range, tn_range, states_bins, spns_per_bin, ou
               bin_counts(bin_key) += 1;
               total_spns_generated += 1;
 
-              filename = sprintf('spn_%d.h5', total_spns_generated);
-              filepath = fullfile(output_dir, filename);
-              save('-hdf5', filepath, 'filter_result');
-              metadata{end+1} = {filename, pn, tn, num_states};
+              % Add the generated SPN to the in-memory bin.
+              if ~isKey(binned_spns, bin_key)
+                  binned_spns(bin_key) = {};
+              endif
+              current_bin_spns = binned_spns(bin_key);
+              current_bin_spns{end+1} = filter_result;
+              binned_spns(bin_key) = current_bin_spns;
 
               progress_percent = (total_spns_generated / total_spns_required) * 100;
               disp(sprintf('Progress: %.2f%% (%d / %d) - Found SPN for bin (p=%d, t=%d, s_idx=%d). Bin count: %d/%d', ...
@@ -156,13 +159,91 @@ function generate_dataset_impl(pn_range, tn_range, states_bins, spns_per_bin, ou
       endif
   endwhile
 
-  % --- 4. Save Metadata ---
+  % --- 4. Save Bins to HDF5 and Create Metadata ---
+  disp('Saving binned SPNs to HDF5 files...');
+  metadata = {};
+
+  bin_keys = keys(binned_spns);
+  for i = 1:length(bin_keys)
+      bin_key = bin_keys{i};
+      spn_results = binned_spns(bin_key);
+      num_spns_in_bin = length(spn_results);
+
+      % Define filename for the bin.
+      bin_filename = [bin_key '.h5'];
+      bin_filepath = fullfile(output_dir, bin_filename);
+
+      if exist(bin_filepath, 'file')
+          delete(bin_filepath);
+      endif
+
+      % --- Aggregate fixed-size data ---
+      first_spn = spn_results{1};
+      [pn, tn_x2] = size(first_spn.petri_net);
+      tn = (tn_x2 - 1) / 2;
+
+      % Pre-allocate arrays for stacking.
+      stacked_petri_nets = zeros(pn, tn_x2, num_spns_in_bin);
+      stacked_lambdas = zeros(tn, num_spns_in_bin);
+      stacked_mus = zeros(1, num_spns_in_bin);
+
+      for j = 1:num_spns_in_bin
+          spn = spn_results{j};
+          stacked_petri_nets(:, :, j) = spn.petri_net;
+          stacked_lambdas(:, j) = spn.spn_lambda;
+          stacked_mus(j) = spn.spn_mu;
+      endfor
+
+      % --- Write stacked data to HDF5 ---
+      h5create(bin_filepath, '/stacked/petri_nets', size(stacked_petri_nets), 'Datatype', 'double');
+      h5write(bin_filepath, '/stacked/petri_nets', stacked_petri_nets);
+
+      h5create(bin_filepath, '/stacked/lambdas', size(stacked_lambdas), 'Datatype', 'double');
+      h5write(bin_filepath, '/stacked/lambdas', stacked_lambdas);
+
+      h5create(bin_filepath, '/stacked/mus', size(stacked_mus), 'Datatype', 'double');
+      h5write(bin_filepath, '/stacked/mus', stacked_mus);
+
+      % --- Write variable-size data and collect metadata ---
+      for j = 1:num_spns_in_bin
+          spn = spn_results{j};
+          spn_group = sprintf('/spn_%d/', j);
+
+          % Collect metadata for this SPN.
+          num_states = columns(spn.reachability_graph_vertices);
+          metadata{end+1} = {bin_filename, j, pn, tn, num_states};
+
+          % Define datasets for variable-size data.
+          datasets = {
+              'rg_vertices', spn.reachability_graph_vertices;
+              'rg_edges', spn.reachability_graph_edges;
+              'arc_transitions', spn.arc_transitions_list;
+              'mark_density', spn.spn_mark_density;
+              'all_mus', spn.spn_all_mus
+          };
+
+          for k = 1:size(datasets, 1)
+              dataset_name = datasets{k, 1};
+              data = datasets{k, 2};
+
+              if ~isempty(data)
+                  h5_path = [spn_group dataset_name];
+                  h5create(bin_filepath, h5_path, size(data), 'Datatype', 'double');
+                  h5write(bin_filepath, h5_path, data);
+              endif
+          endfor
+      endfor
+
+      disp(['Saved bin ' bin_key ' to ' bin_filename]);
+  endfor
+
+  % --- Save Metadata ---
   disp('Saving metadata...');
   metadata_filepath = fullfile(output_dir, 'metadata.csv');
   fid = fopen(metadata_filepath, 'w');
-  fprintf(fid, 'filename,places,transitions,states\n');
+  fprintf(fid, 'filename,index_in_file,places,transitions,states\n');
   for i = 1:length(metadata)
-      fprintf(fid, '%s,%d,%d,%d\n', metadata{i}{1}, metadata{i}{2}, metadata{i}{3}, metadata{i}{4});
+      fprintf(fid, '%s,%d,%d,%d,%d\n', metadata{i}{1}, metadata{i}{2}, metadata{i}{3}, metadata{i}{4}, metadata{i}{5});
   endfor
   fclose(fid);
 
