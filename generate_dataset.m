@@ -1,49 +1,54 @@
-%% generate_dataset(pn_range, tn_range, states_bins, spns_per_bin, output_dir)
+%% generate_dataset(pn_range, tn_range, states_bins, spns_per_bin, output_dir, varargin)
 %%
 %% Generates a comprehensive dataset of Stochastic Petri Nets (SPNs).
 %%
 %% This is the main script for creating a benchmark dataset. It systematically
 %% generates and validates a large number of SPNs, binning them according to
-%% their structural properties (number of places and transitions) and behavioral
-%% properties (number of states in their reachability graph).
+%% their structural and behavioral properties.
 %%
 %% The script operates in a loop, generating random SPNs and then filtering them
 %% using `filter_spn`. Only valid SPNs that fall into a bin that is not yet
 %% full are saved. This process continues until the target number of SPNs for
 %% each bin has been met.
 %%
-%% The final output is a directory containing individual HDF5 files for each valid
-%% SPN and a `metadata.csv` file that provides a summary of the entire dataset.
-%%
 %% Inputs:
-%%   pn_range: A 1x2 vector `[min, max]` specifying the inclusive range for the
-%%             number of places a generated SPN can have.
+%%   pn_range: A 1x2 vector `[min, max]` for the number of places.
 %%
-%%   tn_range: A 1x2 vector `[min, max]` specifying the inclusive range for the
-%%             number of transitions a generated SPN can have.
+%%   tn_range: A 1x2 vector `[min, max]` for the number of transitions.
 %%
-%%   states_bins: A sorted vector of integers that define the upper boundaries
-%%                for binning based on the number of states. For example, a
-%%                vector `[10, 50, 100]` will create four state-based bins:
-%%                <10, 10-49, 50-99, and >=100 states.
+%%   states_bins: A sorted vector defining state-based bin boundaries.
 %%
-%%   spns_per_bin: A scalar integer specifying the target number of valid SPNs
-%%                 to generate for each defined bin.
+%%   spns_per_bin: The target number of valid SPNs for each bin.
 %%
-%%   output_dir: A string specifying the path to the directory where the dataset
-%%               will be saved. The directory will be created if it does not
-%%               exist.
+%%   output_dir: A string specifying the path to the output directory.
+%%
+%%   varargin: (Optional) A list of key-value pairs for additional options.
+%%     'solver': A string specifying the solver for steady-state analysis.
+%%               Can be 'exact' (default) or an iterative solver like 'gmres'.
 %%
 %% Example Usage:
-%%   % Generate a dataset with 5 SPNs per bin.
+%%   % Generate a dataset using the default exact solver.
 %%   generate_dataset([5, 10], [4, 8], [20, 100], 5, 'my_spn_dataset');
 %%
-%%   % This will generate SPNs with 5 to 10 places and 4 to 8 transitions.
-%%   % The state bins will be <20, 20-99, and >=100.
-%%   % The output will be saved in a folder named 'my_spn_dataset'.
+%%   % Generate a dataset using an iterative solver.
+%%   generate_dataset([5, 10], [4, 8], [20, 100], 5, 'my_spn_dataset', 'solver', 'gmres');
 
-function generate_dataset(pn_range, tn_range, states_bins, spns_per_bin, output_dir)
-  % --- 1. Argument Validation ---
+function generate_dataset(pn_range, tn_range, states_bins, spns_per_bin, output_dir, varargin)
+  % --- 1. Argument Parsing and Validation ---
+  % Default values
+  solver = 'exact';
+
+  % Process optional arguments
+  i = 1;
+  while i <= length(varargin)
+    if strcmp(varargin{i}, 'solver')
+      solver = varargin{i+1};
+      i += 2;
+    else
+      error('Unknown option: %s', varargin{i});
+    endif
+  endwhile
+
   if ~isvector(pn_range) || length(pn_range) != 2 || pn_range(1) > pn_range(2)
     error('pn_range must be a [min, max] vector.');
   endif
@@ -61,20 +66,16 @@ function generate_dataset(pn_range, tn_range, states_bins, spns_per_bin, output_
   endif
 
   % --- 2. Initialization ---
-  % Create the output directory if it doesn't exist.
   if ~exist(output_dir, 'dir')
     mkdir(output_dir);
   endif
 
-  disp('Starting SPN dataset generation...');
+  disp(['Starting SPN dataset generation with solver: ' solver]);
 
-  % Define the full set of bins to be filled.
   pn_values = pn_range(1):pn_range(2);
   tn_values = tn_range(1):tn_range(2);
   num_state_bins = length(states_bins) + 1;
 
-  % Use a Map to store the counts for each bin. The key will be a string like
-  % "p<pn>_t<tn>_s<s_idx>" to uniquely identify each bin.
   bin_counts = containers.Map();
   total_bins = 0;
   for p = pn_values
@@ -95,50 +96,33 @@ function generate_dataset(pn_range, tn_range, states_bins, spns_per_bin, output_
   disp(['Total SPNs to generate: ' num2str(total_spns_required)]);
 
   % --- 3. Main Generation Loop ---
-  % Continue until the required number of SPNs have been generated.
   while total_spns_generated < total_spns_required
-      % Randomly select parameters for this iteration.
       pn = randi(pn_range);
       tn = randi(tn_range);
 
-      % Generate a random SPN. Using default values for prob and max_lambda.
-      % These could be exposed as arguments in a future version.
       prob = 0.5;
       max_lambda = 10;
       [cm, ~] = spn_generate_random(pn, tn, prob, max_lambda);
 
-      % Run the filter and analysis.
-      % Using default values for the filter limits.
-      filter_result = filter_spn(cm);
+      % Run the filter and analysis, passing the chosen solver.
+      filter_result = filter_spn(cm, 10, 4, 500, solver);
 
-      % Check if the generated SPN is valid.
       if filter_result.valid
           num_states = columns(filter_result.reachability_graph_vertices);
           s_idx = get_state_bin_index(num_states, states_bins);
 
-          % Construct the key for the bin this SPN belongs to.
           bin_key = sprintf('p%d_t%d_s%d', pn, tn, s_idx);
 
-          % Check if this bin is already full.
           if isKey(bin_counts, bin_key) && bin_counts(bin_key) < spns_per_bin
-              % This is a useful SPN that fits into a bin we need.
-
-              % Increment counts.
               bin_counts(bin_key) += 1;
               total_spns_generated += 1;
 
-              % Save the valid SPN data to its own HDF5 file.
               filename = sprintf('spn_%d.h5', total_spns_generated);
               filepath = fullfile(output_dir, filename);
-
-              % The '-hdf5' flag specifies the format. The 'filter_result' struct
-              % containing all the SPN's data is saved.
               save('-hdf5', filepath, 'filter_result');
 
-              % Add the details of this SPN to our metadata list.
               metadata{end+1} = {filename, pn, tn, num_states};
 
-              % Report progress to the console.
               progress_percent = (total_spns_generated / total_spns_required) * 100;
               disp(sprintf('Progress: %.2f%% (%d / %d) - Found SPN for bin (p=%d, t=%d, s_idx=%d). Bin count: %d/%d', ...
                   progress_percent, total_spns_generated, total_spns_required, ...
@@ -151,9 +135,7 @@ function generate_dataset(pn_range, tn_range, states_bins, spns_per_bin, output_
   disp('Saving metadata...');
   metadata_filepath = fullfile(output_dir, 'metadata.csv');
   fid = fopen(metadata_filepath, 'w');
-  % Write header
   fprintf(fid, 'filename,places,transitions,states\n');
-  % Write data rows
   for i = 1:length(metadata)
       fprintf(fid, '%s,%d,%d,%d\n', metadata{i}{1}, metadata{i}{2}, metadata{i}{3}, metadata{i}{4});
   endfor
