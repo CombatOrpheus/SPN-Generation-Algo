@@ -40,110 +40,112 @@
 %%           firing rate (lambda) for each transition.
 
 function [cm, lambda] = spn_generate_random(pn, tn, prob, max_lambda)
-  % Initialize the compound matrix with zeros. Using "int32" for memory efficiency.
-  cm = zeros(pn, 2*tn + 1, "int32");
+  % Pre-allocate the compound matrix with zeros.
+  cm = zeros(pn, 2 * tn + 1, "int32");
 
-  % Create unique identifiers for places and transitions.
-  % Places are identified by integers 1 to pn.
-  % Transitions are identified by integers (pn + 1) to (pn + tn).
-  places = [1:pn]';
-  transitions = [1:tn]' + pn;
-  all_nodes = [places; transitions];
+  % --- Build a connected graph ---
+  % To avoid disconnected components, we ensure that every place and transition
+  % is part of a single connected graph. We use logical flags to track which
+  % nodes have been added to the graph, which is more memory-efficient than
+  % managing lists of nodes.
 
-  % --- Start building a connected graph ---
-  % This part of the algorithm ensures that all places and transitions are
-  % connected, forming a single component graph.
+  % Logical flags to track connected nodes.
+  places_in_graph = false(pn, 1);
+  transitions_in_graph = false(tn, 1);
 
-  % A list of nodes already included in our connected subgraph.
-  subgraph_nodes = [];
-  % A list of nodes yet to be added to the subgraph.
-  remaining_nodes = all_nodes;
+  % A list of all node indices for random permutation.
+  all_nodes = [1:(pn + tn)]';
+  shuffled_nodes = all_nodes(randperm(pn + tn));
 
-  % 1. Start with a random place and a random transition.
-  start_place = randi(pn);
-  start_transition = randi(tn) + pn;
+  % Start with the first random node from the shuffled list.
+  start_node_idx = shuffled_nodes(1);
 
-  % Add them to our subgraph.
-  subgraph_nodes = [start_place; start_transition];
-
-  % Remove them from the list of remaining nodes.
-  remaining_nodes(remaining_nodes == start_place) = [];
-  remaining_nodes(remaining_nodes == start_transition) = [];
-
-  % Create a connection between the starting place and transition.
-  % The direction is chosen randomly.
-  % Note: transition indices in the matrix are from 1 to tn.
-  transition_idx = start_transition - pn;
-  if rand() <= 0.5
-    % Connect place to transition (place is an input to the transition).
-    cm(start_place, transition_idx) = 1;
+  if start_node_idx <= pn
+    % If the first node is a place, connect it to a random transition.
+    start_place = start_node_idx;
+    start_transition = randi(tn);
+    places_in_graph(start_place) = true;
+    transitions_in_graph(start_transition) = true;
   else
-    % Connect transition to place (place is an output of the transition).
-    cm(start_place, tn + transition_idx) = 1;
+    % If the first node is a transition, connect it to a random place.
+    start_place = randi(pn);
+    start_transition = start_node_idx - pn;
+    places_in_graph(start_place) = true;
+    transitions_in_graph(start_transition) = true;
   endif
 
-  % 2. Iteratively add the remaining nodes to the subgraph.
-  % We shuffle the remaining nodes to add them in a random order.
-  shuffled_nodes = remaining_nodes(randperm(numel(remaining_nodes)));
+  % Pre-generate random numbers to avoid calling rand() inside the loop.
+  rand_directions = rand(pn + tn, 1);
+  rand_indices = rand(pn + tn, 1);
 
-  for node = shuffled_nodes'
-    % Separate the nodes in the current subgraph into places and transitions.
-    is_place_in_subgraph = subgraph_nodes <= pn;
-    places_in_subgraph = subgraph_nodes(is_place_in_subgraph);
-    transitions_in_subgraph = subgraph_nodes(~is_place_in_subgraph);
+  % Create a random connection (place -> transition or transition -> place).
+  if rand_directions(1) <= 0.5
+    cm(start_place, start_transition) = 1;
+  else
+    cm(start_place, tn + start_transition) = 1;
+  endif
 
-    if node <= pn % The current node to add is a place.
-      % Connect this new place to a random transition already in the subgraph.
-      new_place = node;
-      connected_transition = random_choice(transitions_in_subgraph);
-    else % The current node to add is a transition.
-      % Connect this new transition to a random place already in the subgraph.
-      new_place = random_choice(places_in_subgraph);
-      connected_transition = node;
-    endif
+  % Iteratively connect the remaining nodes.
+  for i = 2:(pn + tn)
+    node = shuffled_nodes(i);
 
-    % Add the new node to the subgraph.
-    subgraph_nodes = [subgraph_nodes; node];
+    if node <= pn % The current node is a place.
+      if places_in_graph(node)
+        continue; % Skip if already in the graph.
+      endif
 
-    % Create a connection between the new node and a node from the subgraph.
-    transition_idx = connected_transition - pn;
-    if rand() <= 0.5
-      cm(new_place, transition_idx) = 1; % Place -> Transition
-    else
-      cm(new_place, tn + transition_idx) = 1; % Transition -> Place
+      % Connect this new place to a random, existing transition.
+      places_in_graph(node) = true;
+      connected_transition_idx = find(transitions_in_graph);
+      rand_idx = floor(rand_indices(i) * numel(connected_transition_idx)) + 1;
+      random_transition = connected_transition_idx(rand_idx);
+
+      if rand_directions(i) <= 0.5
+        cm(node, random_transition) = 1;
+      else
+        cm(node, tn + random_transition) = 1;
+      endif
+    else % The current node is a transition.
+      transition_idx = node - pn;
+      if transitions_in_graph(transition_idx)
+        continue; % Skip if already in the graph.
+      endif
+
+      % Connect this new transition to a random, existing place.
+      transitions_in_graph(transition_idx) = true;
+      connected_place_idx = find(places_in_graph);
+      rand_idx = floor(rand_indices(i) * numel(connected_place_idx)) + 1;
+      random_place = connected_place_idx(rand_idx);
+
+      if rand_directions(i) <= 0.5
+        cm(random_place, transition_idx) = 1;
+      else
+        cm(random_place, tn + transition_idx) = 1;
+      endif
     endif
   endfor
 
   % --- Add more connections based on probability ---
-  % At this point, we have a connected graph. Now, we can add more edges
-  % to increase the complexity of the Petri net.
+  % To increase the net's complexity, we add more connections with a given
+  % probability. This is done in-place to avoid creating a copy of the matrix.
 
-  % For each potential connection that doesn't exist yet, we add it with
-  % a probability `prob`.
-  % We generate a matrix of random numbers and find where they are less than `prob`.
-  add_connection_mask = rand(pn, 2*tn) <= prob;
+  % Identify positions where a connection can be added.
+  add_connection_mask = rand(pn, 2 * tn) <= prob;
+  mask_to_apply = (cm(:, 1:2*tn) == 0) & add_connection_mask;
 
-  % Get the part of the matrix for connections (excluding M0).
-  connections_matrix = cm(:, 1:end-1);
-
-  % Find elements that are currently 0 and are selected by the random mask.
-  mask_to_apply = (connections_matrix == 0) & add_connection_mask;
-
-  % Set those elements to 1.
-  connections_matrix(mask_to_apply) = 1;
-
-  % Put the modified part back into the main compound matrix.
-  cm(:, 1:end-1) = connections_matrix;
+  % Create a full-sized logical mask to use for direct assignment.
+  full_mask = false(size(cm));
+  full_mask(:, 1:2*tn) = mask_to_apply;
+  % Add the new connections directly to the compound matrix.
+  cm(full_mask) = 1;
 
   % --- Set the initial marking (M0) ---
-  % If the initial marking column is all zeros, create a random marking.
-  % This ensures the SPN can evolve from its initial state.
-  if (all(cm(:, end) == 0))
-    % Each place has a 50% chance of having one token.
-    cm(:, end) = randi(2, pn, 1) - 1;
+  % If the initial marking is all zeros, create a random marking to ensure
+  % the SPN can evolve.
+  if all(cm(:, end) == 0)
+    cm(:, end) = rand(pn, 1) > 0.5;
   endif
 
-  % --- Assign firing rates (lambda) to transitions ---
-  % For each transition, choose a random integer value from 1 to max_lambda.
+  % --- Assign firing rates (lambda) ---
   lambda = randi(max_lambda, tn, 1);
 endfunction
