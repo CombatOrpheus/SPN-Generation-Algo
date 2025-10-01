@@ -2,19 +2,35 @@
 %%
 %% Calculates the average number of tokens (mu) for each place at steady state.
 %%
-%% It also computes the marking density, which is the probability of finding a
-%% certain number of tokens in a given place.
+%% This function computes two key metrics based on the steady-state probability
+%% distribution of a Petri net's markings. It provides insight into the long-term
+%% behavior of the system.
 %%
-%% This implementation is vectorized for performance.
+%% 1. Marking Density: For each place, this is the probability of finding a
+%%    specific number of tokens (e.g., P(place 'i' has 'k' tokens)). This is
+%%    returned as a matrix.
+%%
+%% 2. Average Token Count (Mu): For each place, this is the expected number of
+%%    tokens at steady state. It is calculated from the marking density.
+%%
+%% This implementation is vectorized for performance, using `accumarray` to
+%% avoid explicit loops over markings, which can be very slow in Octave.
 %%
 %% Inputs:
-%%   v_list: The list of reachable markings (states). Each column is a marking.
-%%   steady_state_probabilities: The steady-state probability for each marking.
+%%   v_list: The list of all reachable markings (states) of the SPN. This is a
+%%           matrix where each column corresponds to a unique marking vector.
+%%
+%%   steady_state_probabilities: A column vector containing the steady-state
+%%                               probability for each corresponding marking in
+%%                               `v_list`. The sum of this vector should be 1.
 %%
 %% Outputs:
-%%   mark_density: A matrix where mark_density(i, j) is the probability of
-%%                 having j-1 tokens in place i.
-%%   mu_values: A vector containing the average number of tokens for each place.
+%%   mark_density: A matrix of size [num_places, max_tokens + 1] where
+%%                 `mark_density(i, j)` holds the probability of having `j-1`
+%%                 tokens in place `i` at steady state.
+%%
+%%   mu_values: A column vector of size [num_places, 1] containing the average
+%%              number of tokens (mu) for each place.
 
 function [mark_density, mu_values] = calculate_average_markings(v_list, steady_state_probabilities)
   [num_places, num_markings] = size(v_list);

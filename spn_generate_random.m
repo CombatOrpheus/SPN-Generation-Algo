@@ -1,30 +1,43 @@
 %% [cm, lambda] = spn_generate_random(pn, tn, prob, max_lambda)
 %%
-%% Generates a random Stochastic Petri Net (SPN).
+%% Generates a random, connected Stochastic Petri Net (SPN).
 %%
-%% The function creates a connected graph of places and transitions to ensure
-%% that the resulting Petri net is not disjoint. It then adds additional random
-%% connections based on a given probability. The function does not guarantee
-%% the boundedness of the generated SPN.
+%% The function constructs an SPN by first ensuring a connected graph of places
+%% and transitions. This guarantees that the resulting Petri net is not disjoint,
+%% meaning there are no isolated components. It starts by connecting a random
+%% place and transition, then iteratively adds the remaining nodes, ensuring each
+%% new node is connected to the existing subgraph.
+%%
+%% After establishing this connected base, the function adds further random
+%% connections between places and transitions based on a given probability,
+%% increasing the complexity of the net's structure.
+%%
+%% The function also initializes the net with a random marking and assigns
+%% random integer firing rates (lambdas) to each transition. Note that this
+%% function does not guarantee the liveness or boundedness of the generated SPN;
+%% those properties must be checked by a separate filter function.
 %%
 %% Inputs:
-%%   pn: The number of places in the net (an integer).
-%%   tn: The number of transitions in the net (an integer).
-%%   prob: The probability (0 to 1) of adding a random connection between
-%%         a place and a transition.
-%%   max_lambda: The maximum value for the transition rates (lambda). The rates
-%%               will be integers uniformly chosen from [1, max_lambda].
+%%   pn: An integer specifying the number of places in the net.
+%%   tn: An integer specifying the number of transitions in the net.
+%%   prob: A probability (scalar from 0 to 1) of adding an extra random
+%%         connection between any place and transition. A higher value leads
+%%         to a denser net.
+%%   max_lambda: An integer specifying the maximum value for the transition
+%%               firing rates (lambda). The rates are chosen uniformly from
+%%               the integer range [1, max_lambda].
 %%
 %% Outputs:
-%%   cm: The compound matrix representing the SPN. This is a pn x (2*tn + 1)
-%%       integer matrix with the following structure:
-%%       - Columns 1 to tn: The pre-incidence matrix (T_in or A-).
-%%         An entry (i, j) is 1 if there is an arc from place i to transition j.
-%%       - Columns (tn + 1) to 2*tn: The post-incidence matrix (T_out or A+).
-%%         An entry (i, j) is 1 if there is an arc from transition j to place i.
+%%   cm: The compound matrix representing the generated SPN. This is a
+%%       pn x (2*tn + 1) integer matrix with the following structure:
+%%       - Columns 1 to tn: The pre-incidence matrix (T_in or A-), indicating
+%%         inputs to transitions.
+%%       - Columns (tn + 1) to 2*tn: The post-incidence matrix (T_out or A+),
+%%         indicating outputs from transitions.
 %%       - Column (2*tn + 1): The initial marking (M0) of the net.
-%%   lambda: A column vector of size tn x 1, containing the firing rate (lambda)
-%%           for each transition.
+%%
+%%   lambda: A column vector of size tn x 1, containing the randomly generated
+%%           firing rate (lambda) for each transition.
 
 function [cm, lambda] = spn_generate_random(pn, tn, prob, max_lambda)
   % Initialize the compound matrix with zeros. Using "int32" for memory efficiency.

@@ -1,17 +1,23 @@
 %% new_net = add_edges_to_isolated_nodes(petri_net_matrix)
 %%
-%% Ensures that every place and transition in a Petri net has at least one connection.
+%% Reconnects any isolated nodes (places or transitions) in a Petri net.
 %%
-%% This function inspects the Petri net for any places or transitions that
-%% have become disconnected (isolated) and adds random edges to reconnect them.
+%% This function inspects the given Petri net to find any places or transitions
+%% that have no incoming or outgoing arcs (i.e., they are "isolated"). For each
+%% isolated node found, it adds one or more random connections to reintegrate it
+%% into the net's graph structure. This is often used as a corrective step
+%% after a pruning operation that might have disconnected some nodes.
 %%
-%% NOTE: This function was originally named `add_node`, which was misleading.
+%% NOTE: This function was previously named `add_node`, which was misleading as
+%% it does not add new nodes, but rather edges to existing ones.
 %%
 %% Inputs:
-%%   petri_net_matrix: The compound matrix of the SPN.
+%%   petri_net_matrix: The compound matrix of the SPN. This is a pn x (2*tn + 1)
+%%                     matrix structured as [T_in, T_out, M0].
 %%
 %% Outputs:
-%%   new_net: The modified petri net matrix with no isolated nodes.
+%%   new_net: The modified Petri net matrix, guaranteed to have no nodes with a
+%%            total connection degree of zero.
 
 function new_net = add_edges_to_isolated_nodes(petri_net_matrix)
   num_places = rows(petri_net_matrix);

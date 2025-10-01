@@ -1,27 +1,46 @@
 %% generate_dataset(pn_range, tn_range, states_bins, spns_per_bin, output_dir)
 %%
-%% Generates a dataset of Stochastic Petri Nets (SPNs) based on a grid
-%% configuration and saves them to files.
+%% Generates a comprehensive dataset of Stochastic Petri Nets (SPNs).
 %%
-%% This script systematically generates and validates SPNs, binning them based
-%% on their structural properties (number of places, transitions) and behavioral
-%% properties (number of states in the reachability graph). It aims to create
-%% a specified number of valid SPNs for each defined bin.
+%% This is the main script for creating a benchmark dataset. It systematically
+%% generates and validates a large number of SPNs, binning them according to
+%% their structural properties (number of places and transitions) and behavioral
+%% properties (number of states in their reachability graph).
+%%
+%% The script operates in a loop, generating random SPNs and then filtering them
+%% using `filter_spn`. Only valid SPNs that fall into a bin that is not yet
+%% full are saved. This process continues until the target number of SPNs for
+%% each bin has been met.
+%%
+%% The final output is a directory containing individual HDF5 files for each valid
+%% SPN and a `metadata.csv` file that provides a summary of the entire dataset.
 %%
 %% Inputs:
-%%   pn_range: A 1x2 vector [min, max] specifying the range for the number of places.
-%%   tn_range: A 1x2 vector [min, max] specifying the range for the number of transitions.
-%%   states_bins: A vector defining the upper boundaries for the state bins.
-%%                For example, [10, 50, 100] creates four bins:
-%%                <10, 10-49, 50-99, >=100 states.
-%%   spns_per_bin: The target number of valid SPNs to generate for each bin.
+%%   pn_range: A 1x2 vector `[min, max]` specifying the inclusive range for the
+%%             number of places a generated SPN can have.
+%%
+%%   tn_range: A 1x2 vector `[min, max]` specifying the inclusive range for the
+%%             number of transitions a generated SPN can have.
+%%
+%%   states_bins: A sorted vector of integers that define the upper boundaries
+%%                for binning based on the number of states. For example, a
+%%                vector `[10, 50, 100]` will create four state-based bins:
+%%                <10, 10-49, 50-99, and >=100 states.
+%%
+%%   spns_per_bin: A scalar integer specifying the target number of valid SPNs
+%%                 to generate for each defined bin.
+%%
 %%   output_dir: A string specifying the path to the directory where the dataset
-%%               (HDF5 files and metadata.csv) will be saved.
+%%               will be saved. The directory will be created if it does not
+%%               exist.
 %%
 %% Example Usage:
-%%   generate_dataset([5, 10], [4, 8], [20, 100], 5, 'spn_dataset');
-%%   This will generate 5 SPNs for each bin defined by the combinations of
-%%   places (5-10), transitions (4-8), and states (<20, 20-99, >=100).
+%%   % Generate a dataset with 5 SPNs per bin.
+%%   generate_dataset([5, 10], [4, 8], [20, 100], 5, 'my_spn_dataset');
+%%
+%%   % This will generate SPNs with 5 to 10 places and 4 to 8 transitions.
+%%   % The state bins will be <20, 20-99, and >=100.
+%%   % The output will be saved in a folder named 'my_spn_dataset'.
 
 function generate_dataset(pn_range, tn_range, states_bins, spns_per_bin, output_dir)
   % --- 1. Argument Validation ---

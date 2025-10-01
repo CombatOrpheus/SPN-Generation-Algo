@@ -2,15 +2,26 @@
 %%
 %% Randomly deletes edges from over-connected nodes in a Petri net.
 %%
-%% This function "prunes" the Petri net by identifying places and transitions
-%% that have three or more connections and randomly removing some of those
-%% connections. The current implementation leaves exactly two connections.
+%% This function "prunes" a Petri net by reducing the number of connections
+%% to and from nodes (places and transitions) that have a high degree. The
+%% current definition of "over-connected" is any node with three or more
+%% connections.
+%%
+%% For each such over-connected node, the function randomly selects and removes
+%% connections until only two remain. This is a way to simplify the structure
+%% of a dense Petri net, which can be useful for generating a wider variety
+%% of net structures.
+%%
+%% Note: This operation may result in some nodes becoming completely isolated.
+%% It is intended to be used in conjunction with a function like
+%% `add_edges_to_isolated_nodes` to ensure the net remains connected.
 %%
 %% Inputs:
-%%   petri_net_matrix: The compound matrix of the SPN.
+%%   petri_net_matrix: The compound matrix of the SPN to be pruned. This is a
+%%                     pn x (2*tn + 1) matrix structured as [T_in, T_out, M0].
 %%
 %% Outputs:
-%%   new_net: The pruned petri net matrix.
+%%   new_net: The modified (pruned) Petri net matrix.
 
 function new_net = del_edge(petri_net_matrix)
   % --- Prune connections from places ---
