@@ -1,0 +1,12 @@
+# Octave workspace
+octave-workspace
+
+# Generated benchmark files and directories
+benchmark_results/
+benchmark_spns/
+
+# Generated file types that may appear in the root
+*.h5
+*.png
+*.csv
+*.log
