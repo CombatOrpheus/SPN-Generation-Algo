@@ -2,35 +2,48 @@
 %%
 %% Computes the reachability graph of a Stochastic Petri Net (SPN).
 %%
-%% A reachability graph represents all possible states (markings) that a
-%% Petri net can reach from its initial marking by firing transitions. Each node
-%% in the graph is a marking, and an edge represents a transition firing that
-%% leads from one marking to another.
+%% A reachability graph is a directed graph that represents all possible states
+%% (markings) that a Petri net can reach from its initial marking by firing
+%% sequences of transitions. Each node (vertex) in the graph is a unique marking,
+%% and each directed edge represents a transition firing that leads from one
+%% marking to another.
 %%
-%% This function explores the state space of the SPN starting from the initial
-%% marking M0. It checks for unboundedness by limiting the number of tokens
-%% per place and the total number of markings explored.
+%% This function performs a breadth-first search of the state space, starting
+%% from the initial marking M0. It systematically explores new markings by firing
+%% all enabled transitions from the current set of known markings. To prevent
+%% infinite exploration of unbounded nets, the function includes checks to limit
+%% the maximum number of tokens per place and the total number of markings explored.
 %%
 %% Inputs:
 %%   petri_matrix: The compound matrix representing the SPN. This is a
 %%                 pn x (2*tn + 1) matrix with the structure:
 %%                 [T_in, T_out, M0], where T_in is the pre-incidence matrix,
 %%                 T_out is the post-incidence matrix, and M0 is the initial marking.
+%%
 %%   place_upper_limit: (Optional) The maximum number of tokens allowed in any
-%%                      single place. If exceeded, the net is considered unbounded.
+%%                      single place. If any explored marking exceeds this limit,
+%%                      the exploration stops, and the net is flagged as unbounded.
 %%                      Default: 10.
+%%
 %%   marks_upper_limit: (Optional) The maximum number of unique markings to explore.
-%%                      If exceeded, the net is considered unbounded. Default: 500.
+%%                      If the number of discovered markings exceeds this limit,
+%%                      the exploration stops, and the net is flagged as unbounded.
+%%                      Default: 500.
 %%
 %% Outputs:
-%%   result_struct: A structure containing the results of the analysis.
-%%     .v_list: A matrix where each column is a unique marking (vertex) found.
-%%     .edge_list: An m x 2 matrix representing the edges of the graph, where m
-%%                 is the number of transitions between markings. Each row is
-%%                 [source_marking_idx, dest_marking_idx].
-%%     .arctrans_list: A list of transitions corresponding to each edge in edge_list.
-%%     .bounded: A boolean flag, true if the net is considered bounded within the
-%%               given limits, false otherwise.
+%%   result_struct: A structure containing the results of the graph computation.
+%%     .v_list: A matrix where each column represents a unique marking (vertex)
+%%              found during the exploration. The number of rows equals the
+%%              number of places in the net.
+%%     .edge_list: An m x 2 matrix representing the directed edges of the graph,
+%%                 where m is the total number of state transitions found. Each
+%%                 row is a [source_marking_idx, dest_marking_idx] pair, where the
+%%                 indices correspond to columns in `v_list`.
+%%     .arctrans_list: A column vector of length m, where each element is the
+%%                     index of the transition that fired to create the
+%%                     corresponding edge in `edge_list`.
+%%     .bounded: A boolean flag. It is `true` if the exploration completed without
+%%               exceeding the specified limits, and `false` otherwise.
 
 function result_struct = get_reachability_graph(petri_matrix, place_upper_limit=10, marks_upper_limit=500)
   % --- 1. Deconstruct the input compound matrix ---

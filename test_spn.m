@@ -1,13 +1,22 @@
-%% test_spn.m
+%% test_spn()
 %%
 %% A test script to verify the core functionality of the SPN generator and
 %% analysis tools.
 %%
-%% This script runs through the main functions, checking for execution errors
-%% and verifying basic properties of the outputs with assertions. It serves as a
-%% smoke test to ensure the integrity of the codebase after changes.
+%% This script serves as a "smoke test" for the toolkit. It runs through the
+%% main public-facing functions, creating a random SPN and then processing it
+%% through the analysis, filtering, and modification pipeline.
+%%
+%% The function uses assertions to check for execution errors and to verify
+%% that the outputs of each function have the correct dimensions and basic
+%% properties. It provides a quick way to ensure the integrity of the codebase
+%% after changes have been made.
 %%
 %% To run this test, simply execute `test_spn` in the Octave command window.
+%% The script will print the status of each test and will halt with an error
+%% if any assertion fails.
+%%
+%% No inputs or outputs.
 
 function test_spn()
   disp("--- Running SPN Toolbox Test Suite ---");
