@@ -25,24 +25,30 @@
 %%   varargin: (Optional) A list of key-value pairs for additional options.
 %%     'solver': A string specifying the solver for steady-state analysis.
 %%               Can be 'exact' (default) or an iterative solver like 'gmres'.
+%%     'mini_batch_size': An integer specifying how many SPNs to generate
+%%                        and test in each batch. Default is 10.
 %%
 %% Example Usage:
-%%   % Generate a dataset using the default exact solver.
+%%   % Generate a dataset with default options.
 %%   generate_dataset([5, 10], [4, 8], [20, 100], 5, 'my_spn_dataset');
 %%
-%%   % Generate a dataset using an iterative solver.
-%%   generate_dataset([5, 10], [4, 8], [20, 100], 5, 'my_spn_dataset', 'solver', 'gmres');
+%%   % Generate a dataset with a custom solver and batch size.
+%%   generate_dataset([5, 10], [4, 8], [20, 100], 5, 'my_spn_dataset', 'solver', 'gmres', 'mini_batch_size', 20);
 
 function generate_dataset(pn_range, tn_range, states_bins, spns_per_bin, output_dir, varargin)
   % --- 1. Argument Parsing and Validation ---
   % Default values
   solver = 'exact';
+  mini_batch_size = 10; % Default batch size
 
   % Process optional arguments
   i = 1;
   while i <= length(varargin)
     if strcmp(varargin{i}, 'solver')
       solver = varargin{i+1};
+      i += 2;
+    elseif strcmp(varargin{i}, 'mini_batch_size')
+      mini_batch_size = varargin{i+1};
       i += 2;
     else
       error('Unknown option: %s', varargin{i});
@@ -102,33 +108,42 @@ function generate_dataset(pn_range, tn_range, states_bins, spns_per_bin, output_
 
       prob = 0.5;
       max_lambda = 10;
-      [cm, ~] = spn_generate_random(pn, tn, prob, max_lambda);
+      % Generate a batch of SPNs
+      [cms, ~] = spn_generate_random(pn, tn, prob, max_lambda, mini_batch_size);
 
-      % Run the filter and analysis, passing the chosen solver.
-      filter_result = filter_spn(cm, 10, 4, 500, solver);
+      % Process each SPN in the batch
+      for k = 1:mini_batch_size
+          cm = cms(:, :, k);
+          % Run the filter and analysis, passing the chosen solver.
+          filter_result = filter_spn(cm, 10, 4, 500, solver);
 
-      if filter_result.valid
-          num_states = columns(filter_result.reachability_graph_vertices);
-          s_idx = get_state_bin_index(num_states, states_bins);
+          if filter_result.valid
+              num_states = columns(filter_result.reachability_graph_vertices);
+              s_idx = get_state_bin_index(num_states, states_bins);
 
-          bin_key = sprintf('p%d_t%d_s%d', pn, tn, s_idx);
+              bin_key = sprintf('p%d_t%d_s%d', pn, tn, s_idx);
 
-          if isKey(bin_counts, bin_key) && bin_counts(bin_key) < spns_per_bin
-              bin_counts(bin_key) += 1;
-              total_spns_generated += 1;
+              if isKey(bin_counts, bin_key) && bin_counts(bin_key) < spns_per_bin
+                  bin_counts(bin_key) += 1;
+                  total_spns_generated += 1;
 
-              filename = sprintf('spn_%d.h5', total_spns_generated);
-              filepath = fullfile(output_dir, filename);
-              save('-hdf5', filepath, 'filter_result');
+                  filename = sprintf('spn_%d.h5', total_spns_generated);
+                  filepath = fullfile(output_dir, filename);
+                  save('-hdf5', filepath, 'filter_result');
 
-              metadata{end+1} = {filename, pn, tn, num_states};
+                  metadata{end+1} = {filename, pn, tn, num_states};
 
-              progress_percent = (total_spns_generated / total_spns_required) * 100;
-              disp(sprintf('Progress: %.2f%% (%d / %d) - Found SPN for bin (p=%d, t=%d, s_idx=%d). Bin count: %d/%d', ...
-                  progress_percent, total_spns_generated, total_spns_required, ...
-                  pn, tn, s_idx, bin_counts(bin_key), spns_per_bin));
+                  progress_percent = (total_spns_generated / total_spns_required) * 100;
+                  disp(sprintf('Progress: %.2f%% (%d / %d) - Found SPN for bin (p=%d, t=%d, s_idx=%d). Bin count: %d/%d', ...
+                      progress_percent, total_spns_generated, total_spns_required, ...
+                      pn, tn, s_idx, bin_counts(bin_key), spns_per_bin));
+
+                  if total_spns_generated >= total_spns_required
+                      break; % Exit the inner loop if all required SPNs are found
+                  endif
+              endif
           endif
-      endif
+      endfor
   endwhile
 
   % --- 4. Save Metadata ---

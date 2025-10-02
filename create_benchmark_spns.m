@@ -51,46 +51,53 @@ function create_benchmark_spns(output_dir)
 
     found = false;
     attempts = 0;
+    mini_batch_size = 20; % Generate in batches to speed up search
 
     while ~found && attempts < max_attempts
-      attempts += 1;
-
-      % Generate a random SPN with category-specific density.
+      % Generate a batch of random SPNs
       pn = randi(pn_range);
       tn = randi(tn_range);
-      [cm, ~] = spn_generate_random(pn, tn, prob, 10);
+      [cms, ~] = spn_generate_random(pn, tn, prob, 10, mini_batch_size);
 
-      % --- Robustness Step: Ensure Connectivity ---
-      if ~has_no_isolated_nodes(cm)
-        cm = add_edges_to_isolated_nodes(cm);
-      endif
-
-      % Now, filter the (potentially corrected) SPN.
-      % The marks_upper_limit is set higher to allow for larger state spaces to be explored.
-      filter_result = filter_spn(cm, 10, 4, target_states * 2, 'exact');
-
-      if filter_result.valid
-        num_states = columns(filter_result.reachability_graph_vertices);
-        % Check if the SPN is non-trivial and within our desired complexity.
-        % The target is to be reasonably close to `target_states`.
-        if num_states > (target_states / 5) && num_states < (target_states * 1.5)
-          found = true;
-
-          % Save the valid SPN matrix to a text file.
-          petri_net_to_save = filter_result.petri_net;
-          filename = sprintf('spn_%s.txt', set_name);
-          filepath = fullfile(output_dir, filename);
-
-          save('-ascii', filepath, 'petri_net_to_save');
-
-          disp(sprintf('  -> Found and saved %s SPN (p=%d, t=%d, states=%d) to %s', ...
-            set_name, pn, tn, num_states, filepath));
+      % Process the batch
+      for k = 1:mini_batch_size
+        attempts += 1;
+        if attempts >= max_attempts
+          break;
         endif
-      endif
 
-      if mod(attempts, 500) == 0
-        disp(['  ... attempt ' num2str(attempts)]);
-      endif
+        cm = cms(:, :, k);
+
+        % --- Robustness Step: Ensure Connectivity ---
+        if ~has_no_isolated_nodes(cm)
+          cm = add_edges_to_isolated_nodes(cm);
+        endif
+
+        % Now, filter the (potentially corrected) SPN.
+        filter_result = filter_spn(cm, 10, 4, target_states * 2, 'exact');
+
+        if filter_result.valid
+          num_states = columns(filter_result.reachability_graph_vertices);
+          % Check if the SPN is non-trivial and within our desired complexity.
+          if num_states > (target_states / 5) && num_states < (target_states * 1.5)
+            found = true;
+
+            % Save the valid SPN matrix to a text file.
+            petri_net_to_save = filter_result.petri_net;
+            filename = sprintf('spn_%s.txt', set_name);
+            filepath = fullfile(output_dir, filename);
+            save('-ascii', filepath, 'petri_net_to_save');
+
+            disp(sprintf('  -> Found and saved %s SPN (p=%d, t=%d, states=%d) to %s', ...
+              set_name, pn, tn, num_states, filepath));
+            break; % Exit the inner for-loop
+          endif
+        endif
+
+        if mod(attempts, 500) == 0
+          disp(['  ... attempt ' num2str(attempts)]);
+        endif
+      endfor
     endwhile
 
     if ~found

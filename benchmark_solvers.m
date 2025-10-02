@@ -136,17 +136,13 @@ endfunction
 % --- Helper function to generate an SPN for a target state count ---
 function petri_net = generate_spn_for_target_states(target_states, filepath)
   petri_net = [];
+  mini_batch_size = 20; % Generate in batches to speed up search
 
   % --- 1. Define a dynamic search space based on target_states ---
-  % Use a scaling factor to adjust parameters for larger state spaces.
   scaling_factor = sqrt(target_states / 100);
-
   pn_range = round([8, 12] * scaling_factor);
   tn_range = round([6, 10] * scaling_factor);
-
-  % Increase connection density for more complex models
   prob = min(0.7, 0.5 + 0.1 * log(scaling_factor + 1));
-
   max_attempts = round(2000 * scaling_factor);
 
   disp(sprintf('  Generation parameters: pn=[%d,%d], tn=[%d,%d], prob=%.2f, max_attempts=%d', ...
@@ -155,35 +151,47 @@ function petri_net = generate_spn_for_target_states(target_states, filepath)
   found = false;
   attempts = 0;
 
-  % --- 2. Iteratively search for a suitable SPN ---
+  % --- 2. Iteratively search for a suitable SPN using batch generation ---
   while ~found && attempts < max_attempts
-    attempts += 1;
     pn = randi(pn_range);
     tn = randi(tn_range);
-    [cm, ~] = spn_generate_random(pn, tn, prob, 10);
 
-    if ~has_no_isolated_nodes(cm)
-      cm = add_edges_to_isolated_nodes(cm);
-    endif
+    % Generate a batch of SPNs
+    [cms, ~] = spn_generate_random(pn, tn, prob, 10, mini_batch_size);
 
-    % Use a generous upper limit for the reachability graph exploration
-    filter_result = filter_spn(cm, 10, 4, target_states * 4, 'exact');
-
-    if filter_result.valid
-      num_states = columns(filter_result.reachability_graph_vertices);
-      % Accept if the number of states is reasonably close to the target
-      if num_states > (target_states / 2) && num_states < (target_states * 2.5)
-        found = true;
-        petri_net = filter_result.petri_net;
-        save('-ascii', filepath, 'petri_net');
-        disp(sprintf('  -> Generated and saved SPN (p=%d, t=%d, states=%d) to %s', ...
-          pn, tn, num_states, filepath));
+    % Process the batch
+    for k = 1:mini_batch_size
+      attempts += 1;
+      if attempts >= max_attempts
+        break;
       endif
-    endif
 
-    if mod(attempts, 500) == 0
-      disp(['  ... generation attempt ' num2str(attempts)]);
-    endif
+      cm = cms(:, :, k);
+
+      if ~has_no_isolated_nodes(cm)
+        cm = add_edges_to_isolated_nodes(cm);
+      endif
+
+      % Use a generous upper limit for the reachability graph exploration
+      filter_result = filter_spn(cm, 10, 4, target_states * 4, 'exact');
+
+      if filter_result.valid
+        num_states = columns(filter_result.reachability_graph_vertices);
+        % Accept if the number of states is reasonably close to the target
+        if num_states > (target_states / 2) && num_states < (target_states * 2.5)
+          found = true;
+          petri_net = filter_result.petri_net;
+          save('-ascii', filepath, 'petri_net');
+          disp(sprintf('  -> Generated and saved SPN (p=%d, t=%d, states=%d) to %s', ...
+            pn, tn, num_states, filepath));
+          break; % Exit the inner for-loop
+        endif
+      endif
+
+      if mod(attempts, 500) == 0
+        disp(['  ... generation attempt ' num2str(attempts)]);
+      endif
+    endfor
   endwhile
 
   if ~found
