@@ -1,22 +1,19 @@
 %% choice = random_choice(vector)
 %%
-%% Selects a single random element from a given vector.
+%% Selects a random element from a given vector.
 %%
-%% This is a simple utility function that abstracts the process of picking one
-%% random value from a list of items. It is equivalent to sampling one element
-%% without replacement.
+%% This is a simple helper function to abstract the process of picking one
+%% element from a list of items.
 %%
 %% Inputs:
-%%   vector: A vector of any size containing the population of elements from
-%%           which to choose.
+%%   vector: A vector of any type.
 %%
-%% Outputs:
-%%   choice: A single scalar element chosen uniformly at random from the input
-%%           `vector`.
+%% Output:
+%%   choice: A single element chosen randomly from the input vector.
 
 function choice = random_choice(vector)
-  % randi(n) generates a random integer between 1 and n.
-  % numel(vector) gives the number of elements in the vector.
-  random_index = randi(numel(vector));
-  choice = vector(random_index);
+  if isempty(vector)
+    error("Cannot choose from an empty vector.");
+  endif
+  choice = vector(randi(numel(vector)));
 endfunction

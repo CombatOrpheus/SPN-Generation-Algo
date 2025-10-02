@@ -28,10 +28,36 @@ function test_spn()
   max_lambda = 10; % Max firing rate
 
   % --- 1. Test spn_generate_random ---
-  disp("1. Testing spn_generate_random...");
+  disp("1. Testing spn_generate_random (single matrix)...");
   [cm, lambda] = spn_generate_random(pn, tn, prob, max_lambda);
   assert(all(size(cm) == [pn, 2*tn + 1]), "cm has incorrect dimensions");
   assert(all(size(lambda) == [tn, 1]), "lambda has incorrect dimensions");
+  assert(_is_connected(cm), "Generated single SPN is not connected");
+  disp("   ... PASSED");
+
+  % --- 1b. Test spn_generate_random (vectorized) ---
+  disp("1b. Testing spn_generate_random (vectorized)...");
+  num_matrices = 3;
+
+  % Test independent generation
+  [cms_ind, lambdas_ind] = spn_generate_random(pn, tn, prob, max_lambda, num_matrices, false);
+  assert(all(size(cms_ind) == [pn, 2*tn + 1, num_matrices]), "Independent cms have incorrect dimensions");
+  assert(all(size(lambdas_ind) == [tn, num_matrices]), "Independent lambdas have incorrect dimensions");
+  % Check that matrices are not all identical
+  assert(!isequal(cms_ind(:,:,1), cms_ind(:,:,2)), "Independent matrices should be different");
+
+  % Test shared structure generation
+  [cms_shared, lambdas_shared] = spn_generate_random(pn, tn, prob, max_lambda, num_matrices, true);
+  assert(all(size(cms_shared) == [pn, 2*tn + 1, num_matrices]), "Shared cms have incorrect dimensions");
+  assert(all(size(lambdas_shared) == [tn, num_matrices]), "Shared lambdas have incorrect dimensions");
+  % Check that matrices are not all identical (due to random connections and markings)
+  assert(!isequal(cms_shared(:,:,1), cms_shared(:,:,2)), "Shared structure matrices should still differ");
+
+  % Test connectivity for all generated matrices
+  for i = 1:num_matrices
+    assert(_is_connected(cms_ind(:, :, i)), ["Independent matrix " num2str(i) " is not connected"]);
+    assert(_is_connected(cms_shared(:, :, i)), ["Shared structure matrix " num2str(i) " is not connected"]);
+  endfor
   disp("   ... PASSED");
 
   % --- 2. Test get_reachability_graph ---
@@ -76,4 +102,48 @@ function test_spn()
   disp("   ... PASSED");
 
   disp("--- All tests completed successfully! ---");
+endfunction
+
+% --- Private helper function for connectivity testing ---
+function connected = _is_connected(cm)
+  [pn, tn_plus_one] = size(cm);
+  tn = (tn_plus_one - 1) / 2;
+  num_nodes = pn + tn;
+
+  % Build adjacency matrix for the bipartite graph
+  adj = zeros(num_nodes, num_nodes);
+  pre = cm(:, 1:tn);
+  post = cm(:, tn+1:2*tn);
+
+  % Edges from places to transitions
+  adj(1:pn, pn+1:end) = (pre > 0);
+  % Edges from transitions to places
+  adj(pn+1:end, 1:pn) = (post > 0)';
+
+  % Symmetrize the adjacency matrix to represent an undirected graph
+  adj = adj | adj';
+
+  % Perform a Breadth-First Search (BFS) to check connectivity
+  q = 1; % Start BFS from the first node
+  visited = false(1, num_nodes);
+  visited(q) = true;
+  head = 1;
+  tail = 2;
+
+  while head < tail
+    u = q(head);
+    head++;
+
+    neighbors = find(adj(u, :));
+    for v = neighbors
+      if ~visited(v)
+        visited(v) = true;
+        q(tail) = v;
+        tail++;
+      endif
+    endfor
+  endwhile
+
+  % If all nodes were visited, the graph is connected
+  connected = all(visited);
 endfunction

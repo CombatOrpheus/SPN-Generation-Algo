@@ -1,149 +1,132 @@
-%% [cm, lambda] = spn_generate_random(pn, tn, prob, max_lambda)
+%% [cm, lambda] = spn_generate_random(pn, tn, prob, max_lambda, num_matrices, use_shared_structure)
 %%
-%% Generates a random, connected Stochastic Petri Net (SPN).
+%% Generates one or more random, connected Stochastic Petri Nets (SPNs).
 %%
-%% The function constructs an SPN by first ensuring a connected graph of places
-%% and transitions. This guarantees that the resulting Petri net is not disjoint,
-%% meaning there are no isolated components. It starts by connecting a random
-%% place and transition, then iteratively adds the remaining nodes, ensuring each
-%% new node is connected to the existing subgraph.
+%% This function generates SPNs by first ensuring a connected graph of places
+%% and transitions, then adding random connections and properties. It can
+%% generate multiple matrices at once.
 %%
-%% After establishing this connected base, the function adds further random
-%% connections between places and transitions based on a given probability,
-%% increasing the complexity of the net's structure.
+%% The function can operate in two modes:
+%% 1. Independent Mode (default): Generates `num_matrices` completely
+%%    independent SPNs.
+%% 2. Shared Structure Mode: Generates a single base connected graph and
+%%    replicates it `num_matrices` times. Each of these copies then gets its
+%%    own set of additional random connections, markings, and firing rates.
 %%
-%% The function also initializes the net with a random marking and assigns
-%% random integer firing rates (lambdas) to each transition. Note that this
-%% function does not guarantee the liveness or boundedness of the generated SPN;
-%% those properties must be checked by a separate filter function.
+%% Note: This function does not guarantee properties like liveness or
+%% boundedness; these should be verified by a separate filter function.
 %%
 %% Inputs:
 %%   pn: An integer specifying the number of places in the net.
 %%   tn: An integer specifying the number of transitions in the net.
 %%   prob: A probability (scalar from 0 to 1) of adding an extra random
-%%         connection between any place and transition. A higher value leads
-%%         to a denser net.
-%%   max_lambda: An integer specifying the maximum value for the transition
-%%               firing rates (lambda). The rates are chosen uniformly from
-%%               the integer range [1, max_lambda].
+%%         connection.
+%%   max_lambda: An integer specifying the maximum value for firing rates.
+%%   num_matrices (optional): The number of SPNs to generate. Default is 1.
+%%   use_shared_structure (optional): A boolean flag for shared structure mode.
+%%                                    Default is false.
 %%
 %% Outputs:
-%%   cm: The compound matrix representing the generated SPN. This is a
-%%       pn x (2*tn + 1) integer matrix with the following structure:
-%%       - Columns 1 to tn: The pre-incidence matrix (T_in or A-), indicating
-%%         inputs to transitions.
-%%       - Columns (tn + 1) to 2*tn: The post-incidence matrix (T_out or A+),
-%%         indicating outputs from transitions.
-%%       - Column (2*tn + 1): The initial marking (M0) of the net.
+%%   cm: The compound matrix (or matrices) of the generated SPN(s).
+%%       If `num_matrices` > 1, this is a `pn x (2*tn + 1) x num_matrices` 3D matrix.
+%%       If `num_matrices` is 1, this is a 2D matrix.
 %%
-%%   lambda: A column vector of size tn x 1, containing the randomly generated
-%%           firing rate (lambda) for each transition.
+%%   lambda: The firing rates. If `num_matrices` > 1, this is a `tn x num_matrices` matrix.
+%%           If `num_matrices` is 1, this is a `tn x 1` vector.
 
-function [cm, lambda] = spn_generate_random(pn, tn, prob, max_lambda)
-  % Initialize the compound matrix with zeros. Using "int32" for memory efficiency.
+function [cm_out, lambda_out] = spn_generate_random(pn, tn, prob, max_lambda, num_matrices = 1, use_shared_structure = false)
+  % Pre-allocate output matrices
+  cm_out = zeros(pn, 2*tn + 1, num_matrices, "int32");
+  lambda_out = zeros(tn, num_matrices, "int32");
+
+  base_cm = [];
+
+  if use_shared_structure
+    % Generate the base connected graph once
+    base_cm = _generate_connected_graph(pn, tn);
+  endif
+
+  % Loop to generate each matrix
+  for k = 1:num_matrices
+    if use_shared_structure
+      % Start with the pre-generated base graph
+      cm = base_cm;
+    else
+      % Generate a new connected graph for each matrix
+      cm = _generate_connected_graph(pn, tn);
+    endif
+
+    % --- Add more connections based on probability ---
+    add_connection_mask = rand(pn, 2*tn) <= prob;
+    connections_matrix = cm(:, 1:2*tn);
+    mask_to_apply = (connections_matrix == 0) & add_connection_mask;
+    connections_matrix(mask_to_apply) = 1;
+    cm(:, 1:2*tn) = connections_matrix;
+
+    % --- Set the initial marking (M0) ---
+    if (all(cm(:, end) == 0))
+      cm(:, end) = randi(2, pn, 1) - 1;
+    endif
+
+    % --- Assign firing rates (lambda) ---
+    lambda = randi(max_lambda, tn, 1);
+
+    % Store the results
+    cm_out(:, :, k) = cm;
+    lambda_out(:, k) = lambda;
+  endfor
+
+  % Squeeze output for backward compatibility if only one matrix was generated
+  if num_matrices == 1
+    cm_out = squeeze(cm_out);
+  endif
+endfunction
+
+% --- Private helper to generate a single connected graph ---
+function cm = _generate_connected_graph(pn, tn)
   cm = zeros(pn, 2*tn + 1, "int32");
-
-  % Create unique identifiers for places and transitions.
-  % Places are identified by integers 1 to pn.
-  % Transitions are identified by integers (pn + 1) to (pn + tn).
-  places = [1:pn]';
-  transitions = [1:tn]' + pn;
+  places = (1:pn)';
+  transitions = (1:tn)' + pn;
   all_nodes = [places; transitions];
 
-  % --- Start building a connected graph ---
-  % This part of the algorithm ensures that all places and transitions are
-  % connected, forming a single component graph.
-
-  % A list of nodes already included in our connected subgraph.
   subgraph_nodes = [];
-  % A list of nodes yet to be added to the subgraph.
   remaining_nodes = all_nodes;
 
-  % 1. Start with a random place and a random transition.
+  % 1. Start with a random place and transition
   start_place = randi(pn);
   start_transition = randi(tn) + pn;
-
-  % Add them to our subgraph.
   subgraph_nodes = [start_place; start_transition];
-
-  % Remove them from the list of remaining nodes.
   remaining_nodes(remaining_nodes == start_place) = [];
   remaining_nodes(remaining_nodes == start_transition) = [];
 
-  % Create a connection between the starting place and transition.
-  % The direction is chosen randomly.
-  % Note: transition indices in the matrix are from 1 to tn.
   transition_idx = start_transition - pn;
   if rand() <= 0.5
-    % Connect place to transition (place is an input to the transition).
     cm(start_place, transition_idx) = 1;
   else
-    % Connect transition to place (place is an output of the transition).
     cm(start_place, tn + transition_idx) = 1;
   endif
 
-  % 2. Iteratively add the remaining nodes to the subgraph.
-  % We shuffle the remaining nodes to add them in a random order.
+  % 2. Iteratively add remaining nodes
   shuffled_nodes = remaining_nodes(randperm(numel(remaining_nodes)));
-
   for node = shuffled_nodes'
-    % Separate the nodes in the current subgraph into places and transitions.
     is_place_in_subgraph = subgraph_nodes <= pn;
     places_in_subgraph = subgraph_nodes(is_place_in_subgraph);
     transitions_in_subgraph = subgraph_nodes(~is_place_in_subgraph);
 
-    if node <= pn % The current node to add is a place.
-      % Connect this new place to a random transition already in the subgraph.
+    if node <= pn % Node is a place
       new_place = node;
       connected_transition = random_choice(transitions_in_subgraph);
-    else % The current node to add is a transition.
-      % Connect this new transition to a random place already in the subgraph.
+    else % Node is a transition
       new_place = random_choice(places_in_subgraph);
       connected_transition = node;
     endif
 
-    % Add the new node to the subgraph.
     subgraph_nodes = [subgraph_nodes; node];
-
-    % Create a connection between the new node and a node from the subgraph.
     transition_idx = connected_transition - pn;
     if rand() <= 0.5
-      cm(new_place, transition_idx) = 1; % Place -> Transition
+      cm(new_place, transition_idx) = 1;
     else
-      cm(new_place, tn + transition_idx) = 1; % Transition -> Place
+      cm(new_place, tn + transition_idx) = 1;
     endif
   endfor
-
-  % --- Add more connections based on probability ---
-  % At this point, we have a connected graph. Now, we can add more edges
-  % to increase the complexity of the Petri net.
-
-  % For each potential connection that doesn't exist yet, we add it with
-  % a probability `prob`.
-  % We generate a matrix of random numbers and find where they are less than `prob`.
-  add_connection_mask = rand(pn, 2*tn) <= prob;
-
-  % Get the part of the matrix for connections (excluding M0).
-  connections_matrix = cm(:, 1:end-1);
-
-  % Find elements that are currently 0 and are selected by the random mask.
-  mask_to_apply = (connections_matrix == 0) & add_connection_mask;
-
-  % Set those elements to 1.
-  connections_matrix(mask_to_apply) = 1;
-
-  % Put the modified part back into the main compound matrix.
-  cm(:, 1:end-1) = connections_matrix;
-
-  % --- Set the initial marking (M0) ---
-  % If the initial marking column is all zeros, create a random marking.
-  % This ensures the SPN can evolve from its initial state.
-  if (all(cm(:, end) == 0))
-    % Each place has a 50% chance of having one token.
-    cm(:, end) = randi(2, pn, 1) - 1;
-  endif
-
-  % --- Assign firing rates (lambda) to transitions ---
-  % For each transition, choose a random integer value from 1 to max_lambda.
-  lambda = randi(max_lambda, tn, 1);
 endfunction
