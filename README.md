@@ -74,6 +74,36 @@ generate_dataset([5, 10], [4, 8], [20, 100], 5, 'my_spn_dataset');
 
 This will create a directory named `my_spn_dataset` containing the generated SPN files in HDF5 format and a `metadata.csv` file with a summary of the dataset.
 
+#### Parallel Dataset Generation
+
+For users looking to accelerate dataset creation, a parallel version of the generation script is available. This script, `generate_dataset_parallel.m`, utilizes the Octave `parallel` package to distribute the workload across multiple CPU cores.
+
+**Parallel-Specific Prerequisites:**
+
+1.  **Install `octave-dev`**: The Octave `parallel` package requires compilation, which depends on the `mkoctfile` command. You must install the developer tools for Octave first:
+    ```bash
+    sudo apt-get install -y octave-dev
+    ```
+
+2.  **Install Octave Packages**: Launch Octave and install the `struct` and `parallel` packages from Octave Forge:
+    ```octave
+    pkg install -forge struct
+    pkg install -forge parallel
+    ```
+
+**Usage:**
+
+The parallel script is called similarly to the sequential version but is designed to automatically use all available processor cores.
+
+**Example:**
+
+To generate the same dataset as the previous example but in parallel, you would run:
+```octave
+generate_dataset_parallel([5, 10], [4, 8], [20, 100], 5, 'my_spn_dataset_parallel');
+```
+
+This will significantly reduce the time required to generate large datasets.
+
 ## Project Structure
 
 -   **`.m` files (root)**: These are the main, user-facing functions.
