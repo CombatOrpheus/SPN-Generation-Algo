@@ -48,7 +48,7 @@ function new_net = del_edge(petri_net_matrix)
   overconnected_trans_idxs = find(connections_per_transition >= 3);
 
   % For each over-connected transition, remove connections until only 2 remain.
-  for column = overconnected_trans_idxs
+  for column = overconnected_trans_idxs'
     % This part is more complex as connections can be in T_in or T_out.
     % The original code was likely buggy here. A simple, correct implementation
     % would be to find all connected places and randomly disconnect some.
@@ -56,16 +56,27 @@ function new_net = del_edge(petri_net_matrix)
     % Find all places connected to this transition (both as input and output).
     t_in_connections = find(petri_net_matrix(:, column) == 1);
     t_out_connections = find(petri_net_matrix(:, column + num_transitions) == 1);
-    all_connected_places = [t_in_connections; t_out_connections];
 
-    num_to_remove = length(all_connected_places) - 2;
+    % Create a list of all individual connections by iterating.
+    connections = [];
+    for place_row = t_in_connections'
+        connections = [connections; [place_row, column]];
+    endfor
+    for place_row = t_out_connections'
+        connections = [connections; [place_row, column + num_transitions]];
+    endfor
+
+    num_connections = rows(connections);
+    num_to_remove = num_connections - 2;
+
     if num_to_remove > 0
-        places_to_disconnect = randsample(all_connected_places, num_to_remove);
+        indices_to_remove = randsample(1:num_connections, num_to_remove);
+        connections_to_remove = connections(indices_to_remove, :);
 
-        for place_row = places_to_disconnect'
-            % Set both potential connections (in and out) to 0 for this place.
-            petri_net_matrix(place_row, column) = 0;
-            petri_net_matrix(place_row, column + num_transitions) = 0;
+        for i = 1:rows(connections_to_remove)
+            place_row = connections_to_remove(i, 1);
+            matrix_col = connections_to_remove(i, 2);
+            petri_net_matrix(place_row, matrix_col) = 0;
         endfor
     endif
   endfor
