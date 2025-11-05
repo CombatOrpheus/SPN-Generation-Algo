@@ -31,7 +31,7 @@ sudo apt-get install -y octave gnuplot
 
 ### Usage
 
-The two main entry points for this toolkit are `generate_dataset.m` for creating a full dataset and `test_spn.m` for verifying the installation.
+The two main entry points for this toolkit are `generate_dataset.m` for creating a full dataset and `test_suite.m` for verifying the installation.
 
 #### Running the Tests
 
@@ -43,7 +43,7 @@ To ensure everything is set up correctly, you can run the built-in test suite. T
     ```
 2.  From the Octave prompt, run the test script:
     ```octave
-    test_spn
+    test_suite
     ```
 
 You should see output indicating that all tests have passed.

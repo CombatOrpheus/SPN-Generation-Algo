@@ -12,7 +12,7 @@ This repository contains an Octave implementation of an algorithm for generating
 - **`spn_generate_random.m`**: Generates a single random SPN with a specified number of places and transitions.
 - **`filter_spn.m`**: Analyzes an SPN to determine if it meets certain criteria (e.g., boundedness, connectivity) and is suitable for inclusion in the dataset.
 - **`get_reachability_graph.m`**: A core analysis function that computes the reachability graph for a given SPN. This is crucial for checking properties like boundedness.
-- **`test_spn.m`**: A test script that runs a series of checks to ensure the core functionalities of the repository are working correctly.
+- **`test_suite.m`**: A test script that runs a series of checks to ensure the core functionalities of the repository are working correctly.
 
 ### `private/` Directory
 
@@ -35,10 +35,10 @@ sudo apt-get install -y octave gnuplot
 2.  **Consult the Documentation**: All functions, both public and private, should have comprehensive docstrings explaining their purpose, parameters, and return values. Refer to these docstrings to understand the functionality of each script.
 3.  **Run Tests**: Before making changes, run the test suite to ensure the current implementation is working as expected. After making changes, run the tests again to check for regressions.
 
-    To run the tests, start Octave and run the `test_spn` script:
+    To run the tests, start Octave and run the `test_suite` script:
 
     ```octave
-    test_spn
+    test_suite
     ```
 
 4.  **Follow Octave Conventions**: Adhere to the standard coding style and documentation conventions for Octave. Ensure that any new code is clearly commented and documented.
