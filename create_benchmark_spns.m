@@ -88,10 +88,12 @@ function create_benchmark_spns(output_dir)
         endif
       endif
 
-      if mod(attempts, 500) == 0
-        disp(['  ... attempt ' num2str(attempts)]);
-      endif
+      % Report progress at each attempt, using carriage return to overwrite.
+      fprintf(1, '  ... Attempt %d / %d\r', attempts, max_attempts);
     endwhile
+
+    % Print a final newline to move to the next line after the loop finishes.
+    fprintf(1, '\n');
 
     if ~found
       warning('Could not generate a suitable SPN for category: %s after %d attempts.', set_name, max_attempts);
