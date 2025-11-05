@@ -117,7 +117,7 @@ function result_struct = get_reachability_graph(petri_matrix, place_upper_limit=
 
         % Resize v_list if needed
         if markings_count > columns(v_list)
-            v_list = [v_list, zeros(num_places, columns(v_list))];
+            v_list(:, columns(v_list) * 2) = 0;
         endif
 
         next_marking_idx = markings_count;
@@ -137,8 +137,9 @@ function result_struct = get_reachability_graph(petri_matrix, place_upper_limit=
       edge_count += 1;
       % Resize edge lists if needed
       if edge_count > rows(edge_list)
-          edge_list = [edge_list; zeros(rows(edge_list), 2)];
-          arctrans_list = [arctrans_list; zeros(rows(arctrans_list), 1)];
+          new_size = rows(edge_list) * 2;
+          edge_list(new_size, 1) = 0;
+          arctrans_list(new_size, 1) = 0;
       endif
 
       % Add an edge to the graph.
