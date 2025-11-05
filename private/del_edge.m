@@ -27,13 +27,13 @@ function new_net = del_edge(petri_net_matrix)
   % --- Prune connections from places ---
   % Find places that are connected to at least three transitions.
   connections_per_place = sum(petri_net_matrix(:, 1:end-1), 2);
-  overconnected_place_idxs = find(connections_per_place >= 3);
+  overconnected_place_idxs = find(connections_per_place >= 3)(:);
 
   % For each over-connected place, remove connections until only 2 remain.
   for row_idx = 1:length(overconnected_place_idxs)
     row = overconnected_place_idxs(row_idx);
     % Find all connections for the current place.
-    connection_indices = find(petri_net_matrix(row, 1:end-1) == 1);
+    connection_indices = find(petri_net_matrix(row, 1:end-1) == 1)(:);
     num_to_remove = connections_per_place(row) - 2;
 
     % Randomly select connections to remove.
@@ -46,7 +46,7 @@ function new_net = del_edge(petri_net_matrix)
   connections_per_arc = sum(petri_net_matrix(:, 1:end-1), 1);
   num_transitions = (columns(petri_net_matrix) - 1) / 2;
   connections_per_transition = connections_per_arc(1:num_transitions) + connections_per_arc(num_transitions+1:end);
-  overconnected_trans_idxs = find(connections_per_transition >= 3);
+  overconnected_trans_idxs = find(connections_per_transition >= 3)(:);
 
   % For each over-connected transition, remove connections until only 2 remain.
   for col_idx = 1:length(overconnected_trans_idxs)
@@ -56,8 +56,8 @@ function new_net = del_edge(petri_net_matrix)
     % would be to find all connected places and randomly disconnect some.
 
     % Find all places connected to this transition (both as input and output).
-    t_in_connections = find(petri_net_matrix(:, column) == 1);
-    t_out_connections = find(petri_net_matrix(:, column + num_transitions) == 1);
+    t_in_connections = find(petri_net_matrix(:, column) == 1)(:);
+    t_out_connections = find(petri_net_matrix(:, column + num_transitions) == 1)(:);
 
     % Create a list of all individual connections by iterating.
     connections = [];
