@@ -4,6 +4,7 @@ function test_suite()
     test_get_reachability_graph();
     test_filter_spn();
     test_prune_and_add();
+    test_prune_petri_bug();
     disp("--- New Test Suite Completed ---");
 endfunction
 
@@ -171,4 +172,30 @@ function test_prune_and_add()
     assert(sum(cm_with_all_tokens(:, end)) == expected_tokens, "add_token (prob=1) failed to add a token to every place");
 
     disp("--- prune_petri and add_token tests PASSED ---");
+endfunction
+
+function test_prune_petri_bug()
+    disp("--- Testing prune_petri bug fix ---");
+    % This test case constructs a Petri net that is likely to trigger the
+    % dimension mismatch bug in the original del_edge.m implementation.
+    % The bug occurs when `find` returns a row vector for a single over-connected
+    % transition, leading to incorrect iteration.
+
+    T_in = [1; 1; 1];
+    T_out = [0; 0; 0];
+    M0 = [0; 0; 0];
+    cm = [T_in, T_out, M0]; % 3 places, 1 transition
+
+    % The transition is over-connected (degree 3). prune_petri should
+    % reduce its connections to 2.
+    pruned_cm = prune_petri(cm);
+
+    % The pruning should reduce the connections from 3 to 2. However, this
+    % isolates one of the places, which `add_edges_to_isolated_nodes` then
+    % reconnects, adding 2 more edges. The final expected count is 4.
+    expected_connections = 4;
+    actual_connections = sum(sum(pruned_cm(:, 1:end-1)));
+
+    assert(actual_connections == expected_connections, "prune_petri bug test failed: incorrect number of connections after pruning.");
+    disp("--- prune_petri bug fix test PASSED ---");
 endfunction
