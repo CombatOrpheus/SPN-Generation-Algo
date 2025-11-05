@@ -60,9 +60,10 @@ function result_struct = get_reachability_graph(petri_matrix, place_upper_limit=
   edge_count = 0;
 
   % Use a hash map for efficient lookup of seen markings.
-  markings_map = containers.Map();
-  m0_key = sprintf('%d;', M0);
-  markings_map(m0_key) = 1;
+  % The value type is 'any' to allow storing a list of indices for collision handling.
+  markings_map = containers.Map('KeyType', 'double', 'ValueType', 'any');
+  m0_key = hash_marking(M0);
+  markings_map(m0_key) = [1]; % Store as a list
 
   % Pre-allocate memory for performance.
   prealloc_size = min(marks_upper_limit, 1000);
@@ -95,9 +96,23 @@ function result_struct = get_reachability_graph(petri_matrix, place_upper_limit=
       endif
 
       % Check if this `next_marking` has been seen before using the hash map.
-      next_marking_key = sprintf('%d;', next_marking);
-      if ~isKey(markings_map, next_marking_key)
-        % This is a new, unseen marking.
+      next_marking_key = hash_marking(next_marking);
+      next_marking_idx = -1; % Sentinel value
+
+      if isKey(markings_map, next_marking_key)
+        % Hash collision is possible. Verify with the actual markings.
+        colliding_indices = markings_map(next_marking_key);
+        for idx = colliding_indices
+          if isequal(v_list(:, idx), next_marking)
+            % Found an exact match. The marking has been seen before.
+            next_marking_idx = idx;
+            break;
+          endif
+        endfor
+      endif
+
+      if next_marking_idx == -1
+        % This is a new, unseen marking (or a hash collision with a new marking).
         markings_count += 1;
 
         % Resize v_list if needed
@@ -106,12 +121,17 @@ function result_struct = get_reachability_graph(petri_matrix, place_upper_limit=
         endif
 
         next_marking_idx = markings_count;
-        markings_map(next_marking_key) = next_marking_idx;
         v_list(:, next_marking_idx) = next_marking;
         new_markings_list = [new_markings_list, next_marking_idx];
-      else
-        % The marking has been seen before. Get its index from the map.
-        next_marking_idx = markings_map(next_marking_key);
+
+        % Add the new index to the map.
+        if isKey(markings_map, next_marking_key)
+            % Append to the list of colliding indices.
+            markings_map(next_marking_key) = [markings_map(next_marking_key), next_marking_idx];
+        else
+            % No collision, create a new list.
+            markings_map(next_marking_key) = [next_marking_idx];
+        endif
       endif
 
       edge_count += 1;
