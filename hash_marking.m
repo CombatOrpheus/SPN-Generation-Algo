@@ -42,5 +42,7 @@ function key = hash_marking(marking)
     powers = [powers, new_powers];
   endif
 
-  key = mod(dot(marking, powers(1:num_elements)), m_mod);
+  % Optimization: using matrix multiplication (powers * marking) is
+  % significantly faster in Octave than the built-in dot() function
+  key = mod(powers(1:num_elements) * marking, m_mod);
 endfunction
