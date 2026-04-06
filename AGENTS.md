@@ -29,6 +29,36 @@ sudo apt-get update
 sudo apt-get install -y octave gnuplot
 ```
 
+## Performance Benchmarks
+
+To ensure future optimizations are measurable, a benchmark suite is available to profile CPU time and peak memory (Maximum Resident Set Size).
+
+### Running the Benchmark Suite
+The benchmark suite scripts profile three key areas of the application:
+1. **Generation:** Runs `bench_generation.m`
+2. **Filtering:** Runs `bench_filtering.m`
+3. **Solving:** Runs `bench_solving.m`
+
+You can run the suite via the shell script:
+```bash
+./run_benchmark_suite.sh
+```
+
+### Initial Baselines
+These baselines serve as a starting point for measuring the impact of subsequent optimizations.
+
+- **Generation Phase** (100 SPNs):
+  - Peak Memory (Max RSS): ~75.68 MB
+  - Wall Clock Time: ~0:00.84
+
+- **Filtering Phase** (50 SPNs):
+  - Peak Memory (Max RSS): ~79.20 MB
+  - Wall Clock Time: ~0:37.50
+
+- **Solving Phase** (100 states target, using `bicg`):
+  - Peak Memory (Max RSS): ~204.32 MB
+  - Wall Clock Time: ~0:02.66
+
 ## Agent Workflow
 
 1.  **Understand the Goal**: The primary purpose of this codebase is to generate SPN datasets. Most tasks will revolve around modifying the generation algorithm, improving performance, or adding new analysis features.
