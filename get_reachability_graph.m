@@ -102,13 +102,16 @@ function result_struct = get_reachability_graph(petri_matrix, place_upper_limit=
       if isKey(markings_map, next_marking_key)
         % Hash collision is possible. Verify with the actual markings.
         colliding_indices = markings_map(next_marking_key);
-        for idx = colliding_indices
-          if isequal(v_list(:, idx), next_marking)
-            % Found an exact match. The marking has been seen before.
-            next_marking_idx = idx;
-            break;
-          endif
-        endfor
+        % Vectorized check: compare all colliding markings at once.
+        % v_list(:, colliding_indices) creates a submatrix of the colliding markings.
+        % next_marking is automatically broadcasted to match the number of columns.
+        % all(..., 1) checks if all elements in a column are equal.
+        matches = all(v_list(:, colliding_indices) == next_marking, 1);
+        if any(matches)
+          % Found an exact match. The marking has been seen before.
+          % find(matches, 1) returns the index of the first true element.
+          next_marking_idx = colliding_indices(find(matches, 1));
+        endif
       endif
 
       if next_marking_idx == -1
