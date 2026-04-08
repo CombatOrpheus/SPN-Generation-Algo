@@ -1,3 +1,7 @@
 ## 2024-05-24 - Octave dot product overhead
 **Learning:** In Octave, the built-in `dot()` function can be significantly slower than a direct vector multiplication (`row_vector * column_vector`) for simple vector dot products. This is likely due to function call overhead and internal dimension/type checking in `dot()`.
 **Action:** Always prefer direct matrix/vector multiplication (`A * B`) over `dot(A, B)` when calculating dot products of appropriately shaped vectors in performance-critical Octave code.
+
+## 2026-04-08 - Vectorized collision checking
+**Learning:** In Octave, loops over items in hash collisions checking for actual matches can be slow.
+**Action:** Vectorized comparisons like `matches = all(v_list(:, colliding_indices) == next_marking, 1);` are much faster.

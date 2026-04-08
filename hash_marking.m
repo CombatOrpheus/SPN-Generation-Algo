@@ -44,5 +44,5 @@ function key = hash_marking(marking)
 
   % Optimization: using matrix multiplication (powers * marking) is
   % significantly faster in Octave than the built-in dot() function
-  key = mod(powers(1:num_elements) * marking, m_mod);
+  key = mod(powers(1:num_elements) * double(marking), m_mod);
 endfunction
