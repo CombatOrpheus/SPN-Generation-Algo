@@ -59,14 +59,15 @@ function result_struct = get_reachability_graph(petri_matrix, place_upper_limit=
   markings_count = 1;
   edge_count = 0;
 
-  % Use a hash map for efficient lookup of seen markings.
-  % The value type is 'any' to allow storing a list of indices for collision handling.
-  markings_map = containers.Map('KeyType', 'double', 'ValueType', 'any');
-  m0_key = hash_marking(M0);
-  markings_map(m0_key) = [1]; % Store as a list
-
   % Pre-allocate memory for performance.
   prealloc_size = min(marks_upper_limit, 1000);
+
+  % Use a pre-allocated array for storing hash keys instead of containers.Map
+  % which is extremely slow in Octave due to struct/cell overhead.
+  hash_list = zeros(1, prealloc_size);
+  m0_key = hash_marking(M0);
+  hash_list(1) = m0_key;
+
   v_list = zeros(num_places, prealloc_size);
   edge_list = zeros(prealloc_size * 5, 2); % Guessing 5 edges per marking on avg.
   arctrans_list = zeros(prealloc_size * 5, 1);
@@ -95,46 +96,37 @@ function result_struct = get_reachability_graph(petri_matrix, place_upper_limit=
         break; % Exit inner loop
       endif
 
-      % Check if this `next_marking` has been seen before using the hash map.
+      % Check if this `next_marking` has been seen before using the hash array.
       next_marking_key = hash_marking(next_marking);
       next_marking_idx = -1; % Sentinel value
 
-      if isKey(markings_map, next_marking_key)
+      % Find all indices with the matching hash
+      possible_matches = find(hash_list(1:markings_count) == next_marking_key);
+      if ~isempty(possible_matches)
         % Hash collision is possible. Verify with the actual markings.
-        colliding_indices = markings_map(next_marking_key);
         % Vectorized check: compare all colliding markings at once.
-        % v_list(:, colliding_indices) creates a submatrix of the colliding markings.
-        % next_marking is automatically broadcasted to match the number of columns.
-        % all(..., 1) checks if all elements in a column are equal.
-        matches = all(v_list(:, colliding_indices) == next_marking, 1);
+        matches = all(v_list(:, possible_matches) == next_marking, 1);
         if any(matches)
           % Found an exact match. The marking has been seen before.
-          % find(matches, 1) returns the index of the first true element.
-          next_marking_idx = colliding_indices(find(matches, 1));
+          next_marking_idx = possible_matches(find(matches, 1));
         endif
       endif
 
       if next_marking_idx == -1
-        % This is a new, unseen marking (or a hash collision with a new marking).
+        % This is a new, unseen marking.
         markings_count += 1;
 
-        % Resize v_list if needed
+        % Resize v_list and hash_list if needed
         if markings_count > columns(v_list)
-            v_list(:, columns(v_list) * 2) = 0;
+            new_cols = columns(v_list) * 2;
+            v_list(:, new_cols) = 0;
+            hash_list(new_cols) = 0;
         endif
 
         next_marking_idx = markings_count;
         v_list(:, next_marking_idx) = next_marking;
+        hash_list(next_marking_idx) = next_marking_key;
         new_markings_list = [new_markings_list, next_marking_idx];
-
-        % Add the new index to the map.
-        if isKey(markings_map, next_marking_key)
-            % Append to the list of colliding indices.
-            markings_map(next_marking_key) = [markings_map(next_marking_key), next_marking_idx];
-        else
-            % No collision, create a new list.
-            markings_map(next_marking_key) = [next_marking_idx];
-        endif
       endif
 
       edge_count += 1;
