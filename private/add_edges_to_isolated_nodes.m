@@ -25,13 +25,11 @@ function new_net = add_edges_to_isolated_nodes(petri_net_matrix)
 
   % --- Reconnect isolated places ---
   % Find any rows (places) that have no connections.
-  isolated_rows = find(all(petri_net_matrix(:, 1:end-1) == 0, 2))';
+  isolated_rows = find(sum(petri_net_matrix(:, 1:end-1), 2) == 0)';
   for row = isolated_rows
     % Add a random incoming and outgoing arc to reconnect the place.
-    in_transition = randi(num_transitions);
-    out_transition = randi(num_transitions);
-    petri_net_matrix(row, in_transition) = 1;
-    petri_net_matrix(row, num_transitions + out_transition) = 1;
+    petri_net_matrix(row, randi(num_transitions)) = 1;
+    petri_net_matrix(row, num_transitions + randi(num_transitions)) = 1;
   endfor
 
   % --- Reconnect isolated transitions ---

@@ -54,8 +54,12 @@ function [cm, lambda] = spn_generate_random(pn, tn, prob, max_lambda)
   % This part of the algorithm ensures that all places and transitions are
   % connected, forming a single component graph.
 
-  % A list of nodes already included in our connected subgraph.
-  subgraph_nodes = [];
+  % Maintain separate dynamically growing arrays for places and transitions
+  % to avoid O(N^2) complexity from logical filtering inside the loop.
+  places_in_subgraph = zeros(pn, 1);
+  transitions_in_subgraph = zeros(tn, 1);
+  places_count = 0;
+  transitions_count = 0;
   % A list of nodes yet to be added to the subgraph.
   remaining_nodes = all_nodes;
 
@@ -64,7 +68,10 @@ function [cm, lambda] = spn_generate_random(pn, tn, prob, max_lambda)
   start_transition = randi(tn) + pn;
 
   % Add them to our subgraph.
-  subgraph_nodes = [start_place; start_transition];
+  places_count++;
+  places_in_subgraph(places_count) = start_place;
+  transitions_count++;
+  transitions_in_subgraph(transitions_count) = start_transition;
 
   % Remove them from the list of remaining nodes.
   remaining_nodes(remaining_nodes == start_place) = [];
@@ -87,31 +94,23 @@ function [cm, lambda] = spn_generate_random(pn, tn, prob, max_lambda)
   shuffled_nodes = remaining_nodes(randperm(numel(remaining_nodes)));
 
   for node = shuffled_nodes'
-    % Separate the nodes in the current subgraph into places and transitions.
-    is_place_in_subgraph = subgraph_nodes <= pn;
-    places_in_subgraph = subgraph_nodes(is_place_in_subgraph);
-    transitions_in_subgraph = subgraph_nodes(~is_place_in_subgraph);
-
     if node <= pn % The current node to add is a place.
       % Connect this new place to a random transition already in the subgraph.
       new_place = node;
-      connected_transition = random_choice(transitions_in_subgraph);
+      connected_transition = transitions_in_subgraph(randi(transitions_count));
+      places_count++;
+      places_in_subgraph(places_count) = node;
     else % The current node to add is a transition.
       % Connect this new transition to a random place already in the subgraph.
-      new_place = random_choice(places_in_subgraph);
+      new_place = places_in_subgraph(randi(places_count));
       connected_transition = node;
+      transitions_count++;
+      transitions_in_subgraph(transitions_count) = node;
     endif
-
-    % Add the new node to the subgraph.
-    subgraph_nodes = [subgraph_nodes; node];
 
     % Create a connection between the new node and a node from the subgraph.
     transition_idx = connected_transition - pn;
-    if rand() <= 0.5
-      cm(new_place, transition_idx) = 1; % Place -> Transition
-    else
-      cm(new_place, tn + transition_idx) = 1; % Transition -> Place
-    endif
+    cm(new_place, transition_idx + (rand() > 0.5) * tn) = 1;
   endfor
 
   % --- Add more connections based on probability ---

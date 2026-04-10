@@ -32,9 +32,9 @@ function new_net = del_edge(petri_net_matrix)
   % For each over-connected place, remove connections until only 2 remain.
   for row_idx = 1:length(overconnected_place_idxs)
     row = overconnected_place_idxs(row_idx);
-    % Find all connections for the current place.
-    connection_indices = find(petri_net_matrix(row, 1:end-1) == 1)(:);
-    num_to_remove = connections_per_place(row) - 2;
+
+    connection_indices = find(petri_net_matrix(row, 1:end-1))(:);
+    num_to_remove = length(connection_indices) - 2;
 
     % Randomly select connections to remove.
     indices_to_remove = randsample(connection_indices, num_to_remove);
