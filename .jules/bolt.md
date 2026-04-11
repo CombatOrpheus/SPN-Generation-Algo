@@ -17,3 +17,7 @@
 ## 2024-05-24 - Using `sum` over `all` for matrix checks
 **Learning:** Octave's `sum(matrix, dim) == target` can be slightly faster than `all(matrix == target, dim)` in some tight loop scenarios where the matrix is large.
 **Action:** Consider `sum(...) == target` as a micro-optimization alternative to `all(...)` when profiling reveals a bottleneck in logical reductions.
+
+## 2024-04-11 - Loop Overhead with Octave RNG functions
+**Learning:** Calling `randi` or `rand` repeatedly inside a `for` loop incurs massive function call overhead in Octave, particularly heavily impacting algorithms that iteratively build graphs element-by-element (like the initial connected graph step in `spn_generate_random.m`).
+**Action:** When a loop requires random numbers for each iteration, pre-allocate and pre-compute the random values in vectorized arrays before the loop (e.g., `rand_choices = randi(max_val, num_iterations, 1)`). Inside the loop, read from these pre-computed arrays (and use `mod(val, current_max)+1` to handle dynamic ranges if needed) instead of calling the RNG functions.
