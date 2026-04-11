@@ -92,17 +92,24 @@ function [cm, lambda] = spn_generate_random(pn, tn, prob, max_lambda)
   % 2. Iteratively add the remaining nodes to the subgraph.
   % We shuffle the remaining nodes to add them in a random order.
   shuffled_nodes = remaining_nodes(randperm(numel(remaining_nodes)));
+  num_nodes = length(shuffled_nodes);
 
-  for node = shuffled_nodes'
+  % Pre-calculate random choices to avoid randi() and rand() overhead inside the loop
+  rand_choices_t = randi(intmax('int32'), num_nodes, 1);
+  rand_choices_p = randi(intmax('int32'), num_nodes, 1);
+  rand_dir = rand(num_nodes, 1) > 0.5;
+
+  for k = 1:num_nodes
+    node = shuffled_nodes(k);
     if node <= pn % The current node to add is a place.
       % Connect this new place to a random transition already in the subgraph.
       new_place = node;
-      connected_transition = transitions_in_subgraph(randi(transitions_count));
+      connected_transition = transitions_in_subgraph(mod(rand_choices_t(k), transitions_count) + 1);
       places_count++;
       places_in_subgraph(places_count) = node;
     else % The current node to add is a transition.
       % Connect this new transition to a random place already in the subgraph.
-      new_place = places_in_subgraph(randi(places_count));
+      new_place = places_in_subgraph(mod(rand_choices_p(k), places_count) + 1);
       connected_transition = node;
       transitions_count++;
       transitions_in_subgraph(transitions_count) = node;
@@ -110,7 +117,7 @@ function [cm, lambda] = spn_generate_random(pn, tn, prob, max_lambda)
 
     % Create a connection between the new node and a node from the subgraph.
     transition_idx = connected_transition - pn;
-    cm(new_place, transition_idx + (rand() > 0.5) * tn) = 1;
+    cm(new_place, transition_idx + rand_dir(k) * tn) = 1;
   endfor
 
   % --- Add more connections based on probability ---
