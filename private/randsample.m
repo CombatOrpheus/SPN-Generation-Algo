@@ -27,9 +27,9 @@ function samples = randsample(population, k)
     error('k cannot be greater than the number of elements in the population.');
   endif
 
-  % Shuffle the population vector randomly.
-  shuffled = population(randperm(length(population)));
+  % Use randperm directly to select k random indices efficiently.
+  idx = randperm(numel(population), k);
 
-  % Take the first k elements from the shuffled vector.
-  samples = shuffled(1:k);
+  % Sample using the generated indices.
+  samples = population(idx);
 endfunction
