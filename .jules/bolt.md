@@ -21,3 +21,11 @@
 ## 2024-04-11 - Loop Overhead with Octave RNG functions
 **Learning:** Calling `randi` or `rand` repeatedly inside a `for` loop incurs massive function call overhead in Octave, particularly heavily impacting algorithms that iteratively build graphs element-by-element (like the initial connected graph step in `spn_generate_random.m`).
 **Action:** When a loop requires random numbers for each iteration, pre-allocate and pre-compute the random values in vectorized arrays before the loop (e.g., `rand_choices = randi(max_val, num_iterations, 1)`). Inside the loop, read from these pre-computed arrays (and use `mod(val, current_max)+1` to handle dynamic ranges if needed) instead of calling the RNG functions.
+
+## 2024-05-25 - Avoid for-loop concatenation
+**Learning:** Constructing arrays by concatenating elements inside `for` loops in Octave is remarkably slow compared to creating matrices using fully vectorized equivalents (`ones()`, vector concatenation).
+**Action:** Replace `for` loop array concatenation with block matrix creation (e.g., `connections = [t_in, t_out]`) wherever feasible for significant performance improvements.
+
+## 2024-05-25 - randperm over shuffling entire arrays
+**Learning:** When selecting a small random sample (`k`) from a large population, shuffling the entire population array `population(randperm(length(population)))` is inefficient.
+**Action:** Use `randperm(numel(population), k)` to generate `k` random indices directly, then index into the population.

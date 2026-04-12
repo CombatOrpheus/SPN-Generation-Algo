@@ -59,14 +59,9 @@ function new_net = del_edge(petri_net_matrix)
     t_in_connections = find(petri_net_matrix(:, column) == 1)(:);
     t_out_connections = find(petri_net_matrix(:, column + num_transitions) == 1)(:);
 
-    % Create a list of all individual connections by iterating.
-    connections = [];
-    for place_row = t_in_connections'
-        connections = [connections; [place_row, column]];
-    endfor
-    for place_row = t_out_connections'
-        connections = [connections; [place_row, column + num_transitions]];
-    endfor
+    % Vectorized creation of all individual connections to avoid loop overhead
+    connections = [t_in_connections, column * ones(length(t_in_connections), 1); ...
+                   t_out_connections, (column + num_transitions) * ones(length(t_out_connections), 1)];
 
     num_connections = rows(connections);
     num_to_remove = num_connections - 2;
