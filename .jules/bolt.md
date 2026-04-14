@@ -29,3 +29,6 @@
 ## 2024-05-25 - randperm over shuffling entire arrays
 **Learning:** When selecting a small random sample (`k`) from a large population, shuffling the entire population array `population(randperm(length(population)))` is inefficient.
 **Action:** Use `randperm(numel(population), k)` to generate `k` random indices directly, then index into the population.
+## 2024-05-25 - Avoid O(N) array shifting for queues
+**Learning:** In Octave, dynamic array shifting operations like `list(1) = []` combined with appending like `list = [list, new_item]` creates an O(N) memory shifting operation for every queue dequeue, which can cause significant performance slowdowns in algorithms like BFS that process many elements.
+**Action:** Replace `list(1) = []` pattern with pre-allocated arrays and head/tail pointers (`queue_head`, `queue_tail`) to ensure O(1) queue operations, resizing the array conservatively when `queue_tail` exceeds the bounds.
