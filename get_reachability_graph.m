@@ -55,7 +55,6 @@ function result_struct = get_reachability_graph(petri_matrix, place_upper_limit=
   C = T_out - T_in;
 
   % --- 2. Initialize data structures for the graph search ---
-  new_markings_list = [1];
   markings_count = 1;
   edge_count = 0;
 
@@ -72,18 +71,25 @@ function result_struct = get_reachability_graph(petri_matrix, place_upper_limit=
   edge_list = zeros(prealloc_size * 5, 2); % Guessing 5 edges per marking on avg.
   arctrans_list = zeros(prealloc_size * 5, 1);
 
+  % Pre-allocate the queue (new_markings_list) to avoid dynamic array shifting
+  % in the main loop, which is an O(N) operation in Octave.
+  new_markings_queue = zeros(1, prealloc_size);
+  new_markings_queue(1) = 1;
+  queue_head = 1;
+  queue_tail = 1;
+
   v_list(:, 1) = M0;
   result_struct.bounded = true;
 
   % --- 3. Explore the state space to build the reachability graph ---
-  while (~isempty(new_markings_list))
+  while (queue_head <= queue_tail)
     if (markings_count > marks_upper_limit)
       result_struct.bounded = false;
       break; % Exit loop, then trim matrices.
     endif
 
-    current_marking_idx = new_markings_list(1);
-    new_markings_list(1) = [];
+    current_marking_idx = new_markings_queue(queue_head);
+    queue_head += 1;
     current_marking = v_list(:, current_marking_idx);
 
     enabled_transitions = find(all(current_marking >= T_in, 1));
@@ -126,7 +132,13 @@ function result_struct = get_reachability_graph(petri_matrix, place_upper_limit=
         next_marking_idx = markings_count;
         v_list(:, next_marking_idx) = next_marking;
         hash_list(next_marking_idx) = next_marking_key;
-        new_markings_list = [new_markings_list, next_marking_idx];
+
+        % Add to queue and resize if necessary
+        queue_tail += 1;
+        if queue_tail > columns(new_markings_queue)
+            new_markings_queue(columns(new_markings_queue) * 2) = 0;
+        endif
+        new_markings_queue(queue_tail) = next_marking_idx;
       endif
 
       edge_count += 1;
