@@ -26,6 +26,10 @@
 **Learning:** Constructing arrays by concatenating elements inside `for` loops in Octave is remarkably slow compared to creating matrices using fully vectorized equivalents (`ones()`, vector concatenation).
 **Action:** Replace `for` loop array concatenation with block matrix creation (e.g., `connections = [t_in, t_out]`) wherever feasible for significant performance improvements.
 
+## 2024-05-26 - Dynamic Array Shifting in Queues
+**Learning:** In Octave, dynamic array shifting (e.g., `list(1) = []` or `list = [list, new_item]`) used for implementing queues incurs severe O(N) memory and speed overhead. This becomes a significant bottleneck in graph traversal algorithms like breadth-first search.
+**Action:** Always replace dynamic array shifting with pre-allocated arrays and use `head` and `tail` pointers (e.g., `list(tail) = new_item`, `item = list(head)`) for O(1) queue operations in performance-critical loops.
+
 ## 2024-05-25 - randperm over shuffling entire arrays
 **Learning:** When selecting a small random sample (`k`) from a large population, shuffling the entire population array `population(randperm(length(population)))` is inefficient.
 **Action:** Use `randperm(numel(population), k)` to generate `k` random indices directly, then index into the population.
