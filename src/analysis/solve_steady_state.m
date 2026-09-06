@@ -24,7 +24,7 @@
 ## @end deftypefn
 function [probs, err] = solve_steady_state(arg1, arg2)
 
-  if isstruct(arg1)
+  if isstruct(arg1) || isa(arg1, "ReachabilityGraph")
     % Called as solve_steady_state(rg, lambda_values)
     rg = arg1;
     lambda_values = arg2;

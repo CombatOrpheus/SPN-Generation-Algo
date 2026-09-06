@@ -5,6 +5,7 @@ function run_tests()
   if !isempty(repo_root)
     addpath(repo_root);
     addpath(fullfile(repo_root, "tests"));
+    addpath(genpath(fullfile(repo_root, "src")));
     build_oct_dir = fullfile(repo_root, "build", "oct");
     if exist(build_oct_dir, "dir")
       addpath(build_oct_dir);
@@ -18,6 +19,7 @@ function run_tests()
 
   suites = {
     {"test_petrinet", @test_petrinet},
+    {"test_classes", @test_classes},
     {"test_generation", @test_generation},
     {"test_analysis", @test_analysis},
     {"test_augmentation", @test_augmentation},
