@@ -256,11 +256,6 @@ function stats = finalize_dataset(config, output_file, total_written, results, q
       endif
     endif
 
-    layout = "flat";
-    if isfield(config, "hdf5_layout") && !isempty(config.hdf5_layout)
-      layout = config.hdf5_layout;
-    endif
-
     comp_lvl = 4;
     if isfield(config, "hdf5_compression_level") && !isempty(config.hdf5_compression_level)
       comp_lvl = config.hdf5_compression_level;
@@ -268,9 +263,9 @@ function stats = finalize_dataset(config, output_file, total_written, results, q
 
     % Export to HDF5
     if !isempty(results) && length(results) == total_written
-      export_dataset_hdf5(results, h5_file, layout, comp_lvl);
+      export_dataset_hdf5(results, h5_file, comp_lvl);
     else
-      export_dataset_hdf5(output_file, h5_file, layout, comp_lvl);
+      export_dataset_hdf5(output_file, h5_file, comp_lvl);
     endif
 
     if !quiet

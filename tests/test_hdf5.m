@@ -32,7 +32,7 @@ function test_hdf5()
 
   % 1. C++ Flat layout round-trip
   c_flat_path = fullfile(test_dir, "c_flat.h5");
-  export_dataset_hdf5(samples, c_flat_path, "flat", 4, false);
+  export_dataset_hdf5(samples, c_flat_path, 4, false);
   s_c_flat = load_dataset_hdf5(c_flat_path, false);
   assert(length(s_c_flat) == 2, "C++ Flat: count mismatch");
   assert(isequal(s_c_flat{1}.petri_net, s1.petri_net));
@@ -42,19 +42,9 @@ function test_hdf5()
   assert(isequal(s_c_flat{2}.vertices, s2.vertices));
   assert(isequal(s_c_flat{2}.edges, s2.edges));
 
-  % 2. C++ Groups layout round-trip
-  c_groups_path = fullfile(test_dir, "c_groups.h5");
-  export_dataset_hdf5(samples, c_groups_path, "groups", 4, false);
-  s_c_groups = load_dataset_hdf5(c_groups_path, false);
-  assert(length(s_c_groups) == 2, "C++ Groups: count mismatch");
-  assert(isequal(s_c_groups{1}.petri_net, s1.petri_net));
-  assert(isequal(s_c_groups{1}.vertices, s1.vertices));
-  assert(isequal(s_c_groups{1}.edges, s1.edges));
-  assert(isequal(s_c_groups{2}.petri_net, s2.petri_net));
-
-  % 3. Pure Octave Flat layout round-trip
+  % 2. Pure Octave Flat layout round-trip
   p_flat_path = fullfile(test_dir, "p_flat.h5");
-  export_dataset_hdf5(samples, p_flat_path, "flat", 0, true);
+  export_dataset_hdf5(samples, p_flat_path, 0, true);
   s_p_flat = load_dataset_hdf5(p_flat_path, true);
   assert(length(s_p_flat) == 2, "Pure Flat: count mismatch");
   assert(isequal(s_p_flat{1}.petri_net, s1.petri_net));
@@ -62,17 +52,7 @@ function test_hdf5()
   assert(isequal(s_p_flat{1}.edges, s1.edges));
   assert(isequal(s_p_flat{2}.petri_net, s2.petri_net));
 
-  % 4. Pure Octave Groups layout round-trip
-  p_groups_path = fullfile(test_dir, "p_groups.h5");
-  export_dataset_hdf5(samples, p_groups_path, "groups", 0, true);
-  s_p_groups = load_dataset_hdf5(p_groups_path, true);
-  assert(length(s_p_groups) == 2, "Pure Groups: count mismatch");
-  assert(isequal(s_p_groups{1}.petri_net, s1.petri_net));
-  assert(isequal(s_p_groups{1}.vertices, s1.vertices));
-  assert(isequal(s_p_groups{1}.edges, s1.edges));
-  assert(isequal(s_p_groups{2}.petri_net, s2.petri_net));
-
-  % 5. Mixed SPN test (P=2 and P=3)
+  % 3. Mixed SPN test (P=2 and P=3)
   s3 = struct();
   s3.petri_net = int32([1, 0, 0, 1, 1; 0, 1, 1, 0, 0; 0, 0, 1, 0, 1]); % P=3, T=2
   s3.vertices = int32([1, 0, 1; 0, 1, 1; 1, 1, 0; 0, 0, 2]);          % V=4, P=3
@@ -86,7 +66,7 @@ function test_hdf5()
 
   % Mixed C++ Flat
   mixed_c_flat = fullfile(test_dir, "mixed_c_flat.h5");
-  export_dataset_hdf5(mixed_samples, mixed_c_flat, "flat", 4, false);
+  export_dataset_hdf5(mixed_samples, mixed_c_flat, 4, false);
   m_cf = load_dataset_hdf5(mixed_c_flat, false);
   assert(length(m_cf) == 2);
   assert(isequal(m_cf{1}.petri_net, s1.petri_net));
@@ -94,31 +74,15 @@ function test_hdf5()
   assert(isequal(m_cf{1}.vertices, s1.vertices));
   assert(isequal(m_cf{2}.vertices, s3.vertices));
 
-  % Mixed C++ Groups
-  mixed_c_groups = fullfile(test_dir, "mixed_c_groups.h5");
-  export_dataset_hdf5(mixed_samples, mixed_c_groups, "groups", 4, false);
-  m_cg = load_dataset_hdf5(mixed_c_groups, false);
-  assert(length(m_cg) == 2);
-  assert(isequal(m_cg{1}.petri_net, s1.petri_net));
-  assert(isequal(m_cg{2}.petri_net, s3.petri_net));
-
   % Mixed Pure Flat
   mixed_p_flat = fullfile(test_dir, "mixed_p_flat.h5");
-  export_dataset_hdf5(mixed_samples, mixed_p_flat, "flat", 0, true);
+  export_dataset_hdf5(mixed_samples, mixed_p_flat, 0, true);
   m_pf = load_dataset_hdf5(mixed_p_flat, true);
   assert(length(m_pf) == 2);
   assert(isequal(m_pf{1}.petri_net, s1.petri_net));
   assert(isequal(m_pf{2}.petri_net, s3.petri_net));
 
-  % Mixed Pure Groups
-  mixed_p_groups = fullfile(test_dir, "mixed_p_groups.h5");
-  export_dataset_hdf5(mixed_samples, mixed_p_groups, "groups", 0, true);
-  m_pg = load_dataset_hdf5(mixed_p_groups, true);
-  assert(length(m_pg) == 2);
-  assert(isequal(m_pg{1}.petri_net, s1.petri_net));
-  assert(isequal(m_pg{2}.petri_net, s3.petri_net));
-
-  % 6. Compression level comparison on a realistic synthetic sample set
+  % 4. Compression level comparison on a realistic synthetic sample set
   big_s = struct();
   big_s.petri_net = int32(zeros(10, 21));
   big_s.vertices = int32(zeros(500, 10));
@@ -131,8 +95,8 @@ function test_hdf5()
 
   uncomp_path = fullfile(test_dir, "uncompressed.h5");
   comp_path = fullfile(test_dir, "compressed.h5");
-  export_dataset_hdf5(big_samples, uncomp_path, "flat", 0, false);
-  export_dataset_hdf5(big_samples, comp_path, "flat", 6, false);
+  export_dataset_hdf5(big_samples, uncomp_path, 0, false);
+  export_dataset_hdf5(big_samples, comp_path, 6, false);
 
   uncomp_stat = stat(uncomp_path);
   comp_stat = stat(comp_path);

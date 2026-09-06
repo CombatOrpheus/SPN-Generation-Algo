@@ -44,7 +44,6 @@ function main(varargin)
   cli_exact = [];
   cli_workers = "";
   cli_format = "";
-  cli_layout = "";
   cli_compression = [];
 
   % Parse CLI args
@@ -68,9 +67,6 @@ function main(varargin)
       i = i + 2;
     elseif strcmp(arg, "--format") && i < length(varargin)
       cli_format = varargin{i + 1};
-      i = i + 2;
-    elseif strcmp(arg, "--hdf5-layout") && i < length(varargin)
-      cli_layout = varargin{i + 1};
       i = i + 2;
     elseif (strcmp(arg, "--compression") || strcmp(arg, "-z")) && i < length(varargin)
       cli_compression = str2double(varargin{i + 1});
@@ -129,9 +125,6 @@ function main(varargin)
   if !isempty(cli_format)
     config.format = cli_format;
   endif
-  if !isempty(cli_layout)
-    config.hdf5_layout = cli_layout;
-  endif
   if !isempty(cli_compression) && !isnan(cli_compression)
     config.hdf5_compression_level = cli_compression;
   endif
@@ -161,7 +154,6 @@ function print_usage()
   printf("  --samples <N>           Number of samples to generate\n");
   printf("  --output <path>         Output file destination path\n");
   printf("  --format <fmt>          Output format: 'jsonl', 'hdf5', or 'both'\n");
-  printf("  --hdf5-layout <layout>  HDF5 layout: 'flat' (CSR pointers) or 'groups' (hierarchical)\n");
   printf("  --compression, -z <N>   Deflate compression level (0-9, default: 4)\n");
   printf("  --workers, -j <N>       Number of parallel workers ('auto' or integer, default: auto)\n");
   printf("  --seed <N>              Random number generator seed for reproducibility\n");

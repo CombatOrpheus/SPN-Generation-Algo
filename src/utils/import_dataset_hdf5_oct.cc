@@ -145,118 +145,47 @@ High-performance C++ accelerated HDF5 dataset loader for SPN datasets.\n\
         return octave_value_list();
     }
 
-    std::string layout = read_attr_string(file_id, "layout");
-    int32_t num_samples_attr = read_attr_int32(file_id, "num_samples", 0);
-
-    if (layout.empty()) {
-        if (H5Lexists(file_id, "/samples", H5P_DEFAULT)) {
-            layout = "groups";
-        } else if (H5Lexists(file_id, "/data", H5P_DEFAULT)) {
-            layout = "flat";
-        } else {
-            H5Fclose(file_id);
-            error("import_dataset_hdf5_oct: Unrecognized HDF5 dataset schema in %s", filepath.c_str());
-            return octave_value_list();
-        }
+    // Flat layout: open /data and /pointers groups
+    hid_t data_grp = H5Gopen2(file_id, "/data", H5P_DEFAULT);
+    hid_t ptr_grp = H5Gopen2(file_id, "/pointers", H5P_DEFAULT);
+    if (data_grp < 0 || ptr_grp < 0) {
+        if (data_grp >= 0) H5Gclose(data_grp);
+        if (ptr_grp >= 0) H5Gclose(ptr_grp);
+        H5Fclose(file_id);
+        error("import_dataset_hdf5_oct: /data or /pointers group missing in %s", filepath.c_str());
+        return octave_value_list();
     }
 
-    Cell result_cells;
+    std::vector<int32_t> marking_ptr = read_int32_1d(ptr_grp, "marking_ptr");
+    std::vector<int32_t> edge_ptr = read_int32_1d(ptr_grp, "edge_ptr");
+    std::vector<int32_t> pn_ptr = read_int32_1d(ptr_grp, "petri_net_ptr");
+    std::vector<int32_t> num_places = read_int32_1d(ptr_grp, "num_places");
+    std::vector<int32_t> num_transitions = read_int32_1d(ptr_grp, "num_transitions");
+    std::vector<int32_t> num_vertices = read_int32_1d(ptr_grp, "num_vertices");
+    std::vector<int32_t> num_edges = read_int32_1d(ptr_grp, "num_edges");
 
-    if (layout == "groups") {
-        hid_t samples_grp = H5Gopen2(file_id, "/samples", H5P_DEFAULT);
-        if (samples_grp < 0) {
-            H5Fclose(file_id);
-            error("import_dataset_hdf5_oct: /samples group missing.");
-            return octave_value_list();
-        }
+    size_t N = num_places.size();
+    Cell result_cells(N, 1);
 
-        hsize_t num_obj = 0;
-        H5Gget_num_objs(samples_grp, &num_obj);
-        size_t N = (num_samples_attr > 0) ? (size_t)num_samples_attr : (size_t)num_obj;
-        result_cells = Cell(N, 1);
+    int32NDArray all_edges = read_int32_2d(data_grp, "edges");
+    std::vector<int32_t> all_at = read_int32_1d(data_grp, "arc_transitions");
+    std::vector<double> all_ssp = read_double_1d(data_grp, "steady_state_probs");
+    std::vector<double> all_lv = read_double_1d(data_grp, "lambda_values");
+    std::vector<int32_t> all_pn = read_int32_1d(data_grp, "petri_net");
 
-        for (size_t i = 0; i < N; i++) {
-            char grp_name[64];
-            std::snprintf(grp_name, sizeof(grp_name), "sample_%06zu", i + 1);
+    int32_t uniform_p = read_attr_int32(data_grp, "uniform_places", 1);
+    int32NDArray all_vert_2d;
+    std::vector<int32_t> all_vert_1d;
+    Matrix all_am_2d;
+    std::vector<double> all_am_1d;
 
-            if (H5Lexists(samples_grp, grp_name, H5P_DEFAULT)) {
-                hid_t s_grp = H5Gopen2(samples_grp, grp_name, H5P_DEFAULT);
-                if (s_grp >= 0) {
-                    octave_scalar_map m;
-                    m.setfield("petri_net", read_int32_2d(s_grp, "petri_net"));
-                    m.setfield("vertices", read_int32_2d(s_grp, "vertices"));
-                    m.setfield("edges", read_int32_2d(s_grp, "edges"));
-
-                    std::vector<int32_t> at = read_int32_1d(s_grp, "arc_transitions");
-                    int32NDArray at_mat(dim_vector(at.size(), 1));
-                    for (size_t k = 0; k < at.size(); k++) at_mat(k) = at[k];
-                    m.setfield("arc_transitions", at_mat);
-
-                    std::vector<double> lv = read_double_1d(s_grp, "lambda_values");
-                    ColumnVector lv_vec(lv.size());
-                    for (size_t k = 0; k < lv.size(); k++) lv_vec(k) = lv[k];
-                    m.setfield("lambda_values", lv_vec);
-
-                    std::vector<double> ssp = read_double_1d(s_grp, "steady_state_probs");
-                    ColumnVector ssp_vec(ssp.size());
-                    for (size_t k = 0; k < ssp.size(); k++) ssp_vec(k) = ssp[k];
-                    m.setfield("steady_state_probs", ssp_vec);
-
-                    std::vector<double> am = read_double_1d(s_grp, "avg_markings");
-                    ColumnVector am_vec(am.size());
-                    for (size_t k = 0; k < am.size(); k++) am_vec(k) = am[k];
-                    m.setfield("avg_markings", am_vec);
-
-                    result_cells(i) = m;
-                    H5Gclose(s_grp);
-                }
-            }
-        }
-        H5Gclose(samples_grp);
-
+    if (uniform_p) {
+        all_vert_2d = read_int32_2d(data_grp, "vertices");
+        all_am_2d = read_double_2d(data_grp, "avg_markings");
     } else {
-        // Flat layout
-        hid_t data_grp = H5Gopen2(file_id, "/data", H5P_DEFAULT);
-        hid_t ptr_grp = H5Gopen2(file_id, "/pointers", H5P_DEFAULT);
-        if (data_grp < 0 || ptr_grp < 0) {
-            if (data_grp >= 0) H5Gclose(data_grp);
-            if (ptr_grp >= 0) H5Gclose(ptr_grp);
-            H5Fclose(file_id);
-            error("import_dataset_hdf5_oct: /data or /pointers group missing in flat layout.");
-            return octave_value_list();
-        }
-
-        std::vector<int32_t> marking_ptr = read_int32_1d(ptr_grp, "marking_ptr");
-        std::vector<int32_t> edge_ptr = read_int32_1d(ptr_grp, "edge_ptr");
-        std::vector<int32_t> pn_ptr = read_int32_1d(ptr_grp, "petri_net_ptr");
-        std::vector<int32_t> num_places = read_int32_1d(ptr_grp, "num_places");
-        std::vector<int32_t> num_transitions = read_int32_1d(ptr_grp, "num_transitions");
-        std::vector<int32_t> num_vertices = read_int32_1d(ptr_grp, "num_vertices");
-        std::vector<int32_t> num_edges = read_int32_1d(ptr_grp, "num_edges");
-
-        size_t N = num_places.size();
-        result_cells = Cell(N, 1);
-
-        int32NDArray all_edges = read_int32_2d(data_grp, "edges");
-        std::vector<int32_t> all_at = read_int32_1d(data_grp, "arc_transitions");
-        std::vector<double> all_ssp = read_double_1d(data_grp, "steady_state_probs");
-        std::vector<double> all_lv = read_double_1d(data_grp, "lambda_values");
-        std::vector<int32_t> all_pn = read_int32_1d(data_grp, "petri_net");
-
-        int32_t uniform_p = read_attr_int32(data_grp, "uniform_places", 1);
-        int32NDArray all_vert_2d;
-        std::vector<int32_t> all_vert_1d;
-        Matrix all_am_2d;
-        std::vector<double> all_am_1d;
-
-        if (uniform_p) {
-            all_vert_2d = read_int32_2d(data_grp, "vertices");
-            all_am_2d = read_double_2d(data_grp, "avg_markings");
-        } else {
-            all_vert_1d = read_int32_1d(data_grp, "vertices");
-            all_am_1d = read_double_1d(data_grp, "avg_markings");
-        }
-
+        all_vert_1d = read_int32_1d(data_grp, "vertices");
+        all_am_1d = read_double_1d(data_grp, "avg_markings");
+    }
         size_t curr_vert_tok = 0;
         size_t curr_am_idx = 0;
         size_t curr_lv_idx = 0;
@@ -343,7 +272,6 @@ High-performance C++ accelerated HDF5 dataset loader for SPN datasets.\n\
 
         H5Gclose(data_grp);
         H5Gclose(ptr_grp);
-    }
 
     H5Fclose(file_id);
     return octave_value(result_cells);

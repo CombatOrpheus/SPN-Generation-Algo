@@ -1,13 +1,12 @@
 ## -*- texinfo -*-
 ## @deftypefn {} {} export_dataset_hdf5 (@var{source}, @var{filepath})
-## @deftypefnx {} {} export_dataset_hdf5 (@var{source}, @var{filepath}, @var{layout})
-## @deftypefnx {} {} export_dataset_hdf5 (@var{source}, @var{filepath}, @var{layout}, @var{compression_level})
-## @deftypefnx {} {} export_dataset_hdf5 (@var{source}, @var{filepath}, @var{layout}, @var{compression_level}, @var{force_pure_octave})
-## Export SPN dataset to HDF5 binary format.
+## @deftypefnx {} {} export_dataset_hdf5 (@var{source}, @var{filepath}, @var{compression_level})
+## @deftypefnx {} {} export_dataset_hdf5 (@var{source}, @var{filepath}, @var{compression_level}, @var{force_pure_octave})
+## Export SPN dataset to HDF5 binary format using CSR flat layout.
 ##
 ## Exports generated SPN samples to HDF5 binary storage using either high-performance
 ## C++ acceleration (@file{export_dataset_hdf5_oct}) with chunked byte-shuffle and deflate
-## filters, or pure Octave fallback.
+## filters, or pure Octave fallback. Uses CSR flat contiguous arrays with index pointers.
 ##
 ## @table @asis
 ## @item @var{source}
@@ -15,11 +14,6 @@
 ##
 ## @item @var{filepath}
 ## Destination file path for the HDF5 output (.h5).
-##
-## @item @var{layout}
-## Dataset layout: @"flat@" (CSR-style contiguous arrays with index pointers, optimal
-## for GNN/PyTorch training) or @"groups@" (hierarchical group-per-sample /samples/sample_%06d/).
-## Default is @"flat@".
 ##
 ## @item @var{compression_level}
 ## Deflate compression level from 0 (uncompressed) to 9 (maximum gzip). Default is 4.
@@ -32,20 +26,16 @@
 ## @seealso{load_dataset_hdf5, load_jsonl, generate_parallel_dataset}
 ## @end deftypefn
 
-function export_dataset_hdf5(source, filepath, layout, compression_level, force_pure_octave)
+function export_dataset_hdf5(source, filepath, compression_level, force_pure_octave)
   if nargin < 2
     error("export_dataset_hdf5: Requires at least source and filepath arguments.");
   endif
 
-  if nargin < 3 || isempty(layout)
-    layout = "flat";
-  endif
-
-  if nargin < 4 || isempty(compression_level)
+  if nargin < 3 || isempty(compression_level)
     compression_level = 4;
   endif
 
-  if nargin < 5 || isempty(force_pure_octave)
+  if nargin < 4 || isempty(force_pure_octave)
     force_pure_octave = false;
   endif
 
@@ -69,39 +59,21 @@ function export_dataset_hdf5(source, filepath, layout, compression_level, force_
 
   % Use C++ oct-file acceleration when available
   if !force_pure_octave && exist("export_dataset_hdf5_oct", "file") == 3
-    export_dataset_hdf5_oct(samples, filepath, layout, compression_level);
+    export_dataset_hdf5_oct(samples, filepath, compression_level);
     return;
   endif
 
   % Pure Octave fallback implementation
-  export_dataset_hdf5_pure(samples, filepath, layout);
+  export_dataset_hdf5_pure(samples, filepath);
 endfunction
 
-function export_dataset_hdf5_pure(samples, filepath, layout)
+function export_dataset_hdf5_pure(samples, filepath)
   N = length(samples);
 
-  if strcmp(layout, "groups")
-    samples_struct = struct();
-    for i = 1:N
-      s = samples{i};
-      field_name = sprintf("sample_%06d", i);
-      entry = struct();
-      entry.petri_net = int32(s.petri_net);
-      entry.vertices = int32(s.vertices);
-      entry.edges = int32(s.edges);
-      entry.arc_transitions = int32(get_arc_transitions(s, size(entry.edges, 1)));
-      entry.lambda_values = double(s.lambda_values(:));
-      entry.steady_state_probs = double(s.steady_state_probs(:));
-      entry.avg_markings = double(get_avg_markings(s));
-      samples_struct.(field_name) = entry;
-    endfor
-    save("-hdf5", filepath, "samples_struct");
-
-  else
-    % Flat layout
-    ds = struct();
-    ds.pointers = struct();
-    ds.data = struct();
+  % Flat layout
+  ds = struct();
+  ds.pointers = struct();
+  ds.data = struct();
 
     num_places = zeros(N, 1, "int32");
     num_transitions = zeros(N, 1, "int32");
@@ -224,7 +196,6 @@ function export_dataset_hdf5_pure(samples, filepath, layout)
     endif
 
     save("-hdf5", filepath, "ds");
-  endif
 endfunction
 
 function am = get_avg_markings(s)

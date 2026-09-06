@@ -3,7 +3,7 @@
 ## @deftypefnx {} {@var{samples} =} load_dataset_hdf5 (@var{filepath}, @var{force_pure_octave})
 ## Load SPN dataset from HDF5 binary file.
 ##
-## Reads an HDF5 dataset stored in either @"flat@" (CSR pointer) or @"groups@" layout,
+## Reads an HDF5 dataset stored in CSR flat pointer layout,
 ## returning a cell array of sample structs identical to @file{load_jsonl}.
 ##
 ## @table @asis
@@ -45,16 +45,7 @@ function samples = load_dataset_hdf5(filepath, force_pure_octave)
   % Pure Octave loading fallback
   loaded = load("-hdf5", filepath);
 
-  if isfield(loaded, "samples_struct")
-    % Pure Octave groups layout
-    fn = fieldnames(loaded.samples_struct);
-    N = length(fn);
-    samples = cell(N, 1);
-    for i = 1:N
-      samples{i} = loaded.samples_struct.(fn{i});
-    endfor
-
-  elseif isfield(loaded, "ds")
+  if isfield(loaded, "ds")
     % Pure Octave flat layout
     ds = loaded.ds;
     N = length(ds.pointers.num_places);

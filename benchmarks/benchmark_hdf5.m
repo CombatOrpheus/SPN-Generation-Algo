@@ -1,4 +1,4 @@
-% benchmark_hdf5.m - Comprehensive benchmark comparing HDF5 vs JSONL, C++ vs Octave, Flat vs Groups
+% benchmark_hdf5.m - Benchmark comparing HDF5 Flat layout vs JSONL baseline
 %
 % Usage:
 %   octave benchmarks/benchmark_hdf5.m
@@ -74,19 +74,13 @@ function benchmark_hdf5(num_samples)
   fflush(stdout);
 
   % Define benchmark configurations
-  % Struct fields: name, engine ('jsonl', 'c++', 'octave'), layout ('flat', 'groups', 'jsonl'), comp_level, file_ext
   configs = {
-    struct("name", "JSONL Baseline",    "engine", "jsonl",  "layout", "jsonl",  "level", 0, "file", "ds_baseline.jsonl");
-    struct("name", "C++ Flat (z=0)",     "engine", "c++",    "layout", "flat",   "level", 0, "file", "ds_c_flat_z0.h5");
-    struct("name", "C++ Flat (z=4)",     "engine", "c++",    "layout", "flat",   "level", 4, "file", "ds_c_flat_z4.h5");
-    struct("name", "C++ Flat (z=6)",     "engine", "c++",    "layout", "flat",   "level", 6, "file", "ds_c_flat_z6.h5");
-    struct("name", "C++ Flat (z=9)",     "engine", "c++",    "layout", "flat",   "level", 9, "file", "ds_c_flat_z9.h5");
-    struct("name", "C++ Groups (z=0)",   "engine", "c++",    "layout", "groups", "level", 0, "file", "ds_c_grp_z0.h5");
-    struct("name", "C++ Groups (z=4)",   "engine", "c++",    "layout", "groups", "level", 4, "file", "ds_c_grp_z4.h5");
-    struct("name", "C++ Groups (z=6)",   "engine", "c++",    "layout", "groups", "level", 6, "file", "ds_c_grp_z6.h5");
-    struct("name", "C++ Groups (z=9)",   "engine", "c++",    "layout", "groups", "level", 9, "file", "ds_c_grp_z9.h5");
-    struct("name", "Octave Flat (z=0)",  "engine", "octave", "layout", "flat",   "level", 0, "file", "ds_p_flat_z0.h5");
-    struct("name", "Octave Groups (z=0)","engine", "octave", "layout", "groups", "level", 0, "file", "ds_p_grp_z0.h5");
+    struct("name", "JSONL Baseline",   "engine", "jsonl",  "level", 0, "file", "ds_baseline.jsonl");
+    struct("name", "C++ Flat (z=0)",    "engine", "c++",    "level", 0, "file", "ds_c_flat_z0.h5");
+    struct("name", "C++ Flat (z=4)",    "engine", "c++",    "level", 4, "file", "ds_c_flat_z4.h5");
+    struct("name", "C++ Flat (z=6)",    "engine", "c++",    "level", 6, "file", "ds_c_flat_z6.h5");
+    struct("name", "C++ Flat (z=9)",    "engine", "c++",    "level", 9, "file", "ds_c_flat_z9.h5");
+    struct("name", "Octave Flat (z=0)", "engine", "octave", "level", 0, "file", "ds_p_flat_z0.h5");
   };
 
   num_configs = length(configs);
@@ -106,9 +100,9 @@ function benchmark_hdf5(num_samples)
     if strcmp(cfg.engine, "jsonl")
       write_jsonl_dataset(samples, fpath);
     elseif strcmp(cfg.engine, "c++")
-      export_dataset_hdf5(samples, fpath, cfg.layout, cfg.level, false);
-    else % octave
-      export_dataset_hdf5(samples, fpath, cfg.layout, cfg.level, true);
+      export_dataset_hdf5(samples, fpath, cfg.level, false);
+    else
+      export_dataset_hdf5(samples, fpath, cfg.level, true);
     endif
 
     % Measure file size
@@ -121,9 +115,9 @@ function benchmark_hdf5(num_samples)
       if strcmp(cfg.engine, "jsonl")
         write_jsonl_dataset(samples, fpath);
       elseif strcmp(cfg.engine, "c++")
-        export_dataset_hdf5(samples, fpath, cfg.layout, cfg.level, false);
+        export_dataset_hdf5(samples, fpath, cfg.level, false);
       else
-        export_dataset_hdf5(samples, fpath, cfg.layout, cfg.level, true);
+        export_dataset_hdf5(samples, fpath, cfg.level, true);
       endif
     endfor
     write_times(c) = (time() - w_start) / num_reps;
@@ -146,7 +140,6 @@ function benchmark_hdf5(num_samples)
     if length(loaded_data) != num_samples
       data_matches(c) = false;
     else
-      % Check first, middle, and last samples
       test_indices = unique([1, round(num_samples/2), num_samples]);
       for idx = test_indices
         s_orig = samples{idx};
@@ -223,6 +216,7 @@ function benchmark_hdf5(num_samples)
   json_w_time = write_times(1);
   json_r_time = read_times(1);
   c_flat_z4_idx = 3; % C++ Flat z=4
+  oct_flat_idx = 6;  % Octave Flat z=0
 
   printf("----------------------------------------------------------------------------------------\n");
   printf("  3. KEY ARCHITECTURAL TAKEAWAYS & SPEEDUP SUMMARY\n");
@@ -235,17 +229,7 @@ function benchmark_hdf5(num_samples)
   printf("      - Read Performance:  %.2fx faster (%.2f ms vs %.2f ms)\n", ...
          json_r_time / read_times(c_flat_z4_idx), read_times(c_flat_z4_idx)*1000, json_r_time*1000);
   printf("\n");
-  printf("  * Flat Layout vs Groups Layout (C++, z=4):\n");
-  c_grp_z4_idx = 7;
-  printf("      - Flat file size:    %.2f KB vs Groups: %.2f KB (%.2fx more compact)\n", ...
-         file_sizes(c_flat_z4_idx)/1024, file_sizes(c_grp_z4_idx)/1024, file_sizes(c_grp_z4_idx)/file_sizes(c_flat_z4_idx));
-  printf("      - Flat Write speed:  %.2fx faster (%.2f ms vs %.2f ms)\n", ...
-         write_times(c_grp_z4_idx)/write_times(c_flat_z4_idx), write_times(c_flat_z4_idx)*1000, write_times(c_grp_z4_idx)*1000);
-  printf("      - Flat Read speed:   %.2fx faster (%.2f ms vs %.2f ms)\n", ...
-         read_times(c_grp_z4_idx)/read_times(c_flat_z4_idx), read_times(c_flat_z4_idx)*1000, read_times(c_grp_z4_idx)*1000);
-  printf("\n");
-  printf("  * C++ Acceleration vs Pure GNU Octave Fallback (Flat Layout):\n");
-  oct_flat_idx = 10;
+  printf("  * C++ Acceleration vs Pure GNU Octave Fallback:\n");
   printf("      - Write Acceleration: %.2fx faster in C++ (%.2f ms vs %.2f ms)\n", ...
          write_times(oct_flat_idx)/write_times(2), write_times(2)*1000, write_times(oct_flat_idx)*1000);
   printf("      - Read Acceleration:  %.2fx faster in C++ (%.2f ms vs %.2f ms)\n", ...

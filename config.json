@@ -8,7 +8,6 @@
   "seed": null,
   "output_file": "spn_dataset.jsonl",
   "format": "jsonl",
-  "hdf5_layout": "flat",
   "hdf5_compression_level": 4,
   "place_upper_bound": 10,
   "marks_lower_limit": 4,

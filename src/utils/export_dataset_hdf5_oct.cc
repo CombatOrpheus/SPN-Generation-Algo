@@ -256,8 +256,8 @@ static ParsedSample parse_octave_sample(const octave_map& m) {
 
 DEFUN_DLD(export_dataset_hdf5_oct, args, nargout,
   "-*- texinfo -*-\n\
-@deftypefn {} {} export_dataset_hdf5_oct (@var{samples_cell}, @var{filepath}, @var{layout}, @var{compression_level})\n\
-High-performance C++ accelerated HDF5 dataset exporter for SPN datasets.\n\
+@deftypefn {} {} export_dataset_hdf5_oct (@var{samples_cell}, @var{filepath}, @var{compression_level})\n\
+High-performance C++ accelerated HDF5 dataset exporter for SPN datasets using CSR flat layout.\n\
 @end deftypefn")
 {
     if (args.length() < 2) {
@@ -273,14 +273,9 @@ High-performance C++ accelerated HDF5 dataset exporter for SPN datasets.\n\
     Cell samples_cell = args(0).cell_value();
     std::string filepath = args(1).string_value();
 
-    std::string layout = "flat";
-    if (args.length() >= 3 && args(2).is_string()) {
-        layout = args(2).string_value();
-    }
-
     int comp_lvl = 4;
-    if (args.length() >= 4 && args(3).isnumeric()) {
-        comp_lvl = args(3).int_value();
+    if (args.length() >= 3 && args(2).isnumeric()) {
+        comp_lvl = args(2).int_value();
         if (comp_lvl < 0) comp_lvl = 0;
         if (comp_lvl > 9) comp_lvl = 9;
     }
@@ -300,47 +295,13 @@ High-performance C++ accelerated HDF5 dataset exporter for SPN datasets.\n\
         return octave_value_list();
     }
 
-    write_attr_string(file_id, "layout", layout);
+    write_attr_string(file_id, "layout", "flat");
     write_attr_int32(file_id, "num_samples", (int32_t)num_samples);
     write_attr_int32(file_id, "compression_level", (int32_t)comp_lvl);
 
-    if (layout == "groups") {
-        hid_t samples_grp = H5Gcreate2(file_id, "/samples", H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
-        if (samples_grp < 0) {
-            H5Fclose(file_id);
-            error("export_dataset_hdf5_oct: Failed to create /samples group.");
-            return octave_value_list();
-        }
-
-        for (size_t i = 0; i < num_samples; i++) {
-            const ParsedSample& s = parsed[i];
-            char grp_name[64];
-            std::snprintf(grp_name, sizeof(grp_name), "sample_%06zu", i + 1);
-
-            hid_t s_grp = H5Gcreate2(samples_grp, grp_name, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
-            if (s_grp >= 0) {
-                write_attr_int32(s_grp, "num_places", (int32_t)s.P);
-                write_attr_int32(s_grp, "num_transitions", (int32_t)s.T);
-                write_attr_int32(s_grp, "num_vertices", (int32_t)s.V);
-                write_attr_int32(s_grp, "num_edges", (int32_t)s.E);
-
-                write_int32_2d(s_grp, "petri_net", s.petri_net.data(), s.P, 2 * s.T + 1, comp_lvl);
-                write_int32_2d(s_grp, "vertices", s.vertices.data(), s.V, (s.V > 0) ? s.vertices.size() / s.V : s.P, comp_lvl);
-                write_int32_2d(s_grp, "edges", s.edges.data(), s.E, 2, comp_lvl);
-                write_int32_1d(s_grp, "arc_transitions", s.arc_transitions.data(), s.E, comp_lvl);
-                write_double_1d(s_grp, "lambda_values", s.lambda_values.data(), s.T, comp_lvl);
-                write_double_1d(s_grp, "steady_state_probs", s.steady_state_probs.data(), s.V, comp_lvl);
-                write_double_1d(s_grp, "avg_markings", s.avg_markings.data(), s.P, comp_lvl);
-
-                H5Gclose(s_grp);
-            }
-        }
-        H5Gclose(samples_grp);
-
-    } else {
-        // Flat layout: CSR-style concatenated arrays with index pointers
-        hid_t data_grp = H5Gcreate2(file_id, "/data", H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
-        hid_t ptr_grp = H5Gcreate2(file_id, "/pointers", H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
+    // Flat layout: CSR-style concatenated arrays with index pointers
+    hid_t data_grp = H5Gcreate2(file_id, "/data", H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
+    hid_t ptr_grp = H5Gcreate2(file_id, "/pointers", H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
 
         std::vector<int32_t> marking_ptr(num_samples + 1, 0);
         std::vector<int32_t> edge_ptr(num_samples + 1, 0);
@@ -477,7 +438,6 @@ High-performance C++ accelerated HDF5 dataset exporter for SPN datasets.\n\
 
         H5Gclose(data_grp);
         H5Gclose(ptr_grp);
-    }
 
     H5Fclose(file_id);
     return octave_value_list();

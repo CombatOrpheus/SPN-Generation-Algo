@@ -87,13 +87,6 @@ function validate_config(config)
     endif
   endif
 
-  if isfield(config, "hdf5_layout")
-    if !ischar(config.hdf5_layout) || ...
-       (!strcmp(config.hdf5_layout, "flat") && !strcmp(config.hdf5_layout, "groups"))
-      error("validate_config: 'hdf5_layout' must be either 'flat' or 'groups'.");
-    endif
-  endif
-
   if isfield(config, "hdf5_compression_level")
     lvl = config.hdf5_compression_level;
     if !isnumeric(lvl) || lvl < 0 || lvl > 9 || floor(lvl) != lvl
