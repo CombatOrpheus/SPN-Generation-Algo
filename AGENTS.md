@@ -23,9 +23,6 @@ This repository contains an Octave implementation of an algorithm for generating
 - **`Makefile`**: Builds C++ `.oct` files via `mkoctfile`.
 - **`dev.sh`**: Helper script managing Docker/Podman containers and test/build workflows.
 
-### Legacy Scripts (Preserved for compatibility)
-
-- `generate_dataset.m`, `spn_generate_random.m`, `filter_spn.m`, `get_reachability_graph.m`, `test_suite.m`, `private/`.
 
 ## Environment Setup
 
@@ -52,10 +49,6 @@ To run the full modern test suite:
 tests/run_tests
 ```
 
-To run the legacy test suite:
-```bash
-./dev.sh octave --eval "test_suite"
-```
 
 ## Agent Workflow
 

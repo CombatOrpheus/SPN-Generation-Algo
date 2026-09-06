@@ -61,11 +61,16 @@ function [total_written, stats] = generate_parallel_dataset(config, num_workers,
   endif
 
   quiet = isfield(config, "quiet") && config.quiet;
+  has_fork = (exist("fork", "builtin") == 5);
 
-  % Single worker or single sample: execute directly without forking
-  if W <= 1 || target_samples == 1
+  % Single worker or single sample or no fork available: execute directly without forking
+  if !has_fork || W <= 1 || target_samples == 1
     if !quiet
-      printf("Running in single-process mode (%d sample(s))...\n", target_samples);
+      if !has_fork && W > 1
+        printf("Notice: fork() is not available on this platform. Running in single-process mode (%d sample(s))...\n", target_samples);
+      else
+        printf("Running in single-process mode (%d sample(s))...\n", target_samples);
+      endif
     endif
     [total_written, attempts, results] = generate_samples_chunk(config, target_samples, output_file, 1, quiet);
     if !quiet
@@ -128,8 +133,8 @@ function [total_written, stats] = generate_parallel_dataset(config, num_workers,
       error("fork() failed for worker %d: %s", i, msg);
     elseif pid == 0
       % CHILD WORKER PROCESS
-      rand("seed", worker_seed);
-      randn("seed", worker_seed);
+      rand("state", worker_seed);
+      randn("state", worker_seed);
       try
         generate_samples_chunk(config, worker_targets(i), part_files{i}, i, quiet);
         _Exit(0);
@@ -208,25 +213,7 @@ function [total_written, stats] = generate_parallel_dataset(config, num_workers,
 
   % Optional HTML report and stats calculation
   if isfield(config, "enable_statistics_report") && config.enable_statistics_report
-    samples = load_jsonl(output_file);
-    results = cell(length(samples), 1);
-    for k = 1:length(samples)
-      s = samples{k};
-      r = struct();
-      if isstruct(s.petri_net)
-        r.num_places = s.petri_net.places;
-        r.num_transitions = s.petri_net.transitions;
-      else
-        % s.petri_net is the P x 2T matrix
-        r.num_places = size(s.petri_net, 1);
-        r.num_transitions = size(s.petri_net, 2) / 2;
-      endif
-      r.average_markings = s.average_markings;
-      r.steady_state_probs = s.steady_state_probs;
-      results{k} = r;
-    endfor
-
-    stats = calculate_stats(results);
+    stats = compute_streaming_stats_jsonl(output_file);
     report_path = [output_file, ".html"];
     generate_html_report(report_path, stats);
     if !quiet
@@ -236,5 +223,60 @@ function [total_written, stats] = generate_parallel_dataset(config, num_workers,
     endif
   else
     stats = struct();
+  endif
+endfunction
+
+function stats = compute_streaming_stats_jsonl(file_path)
+  stats = struct("num_samples", 0, "avg_places", 0.0, "avg_transitions", 0.0, ...
+                 "avg_markings", 0.0, "avg_steady_state_probs", 0.0);
+
+  fid = fopen(file_path, "r");
+  if fid < 0
+    return;
+  endif
+
+  total_samples = 0;
+  total_places = 0.0;
+  total_transitions = 0.0;
+  total_markings = 0.0;
+  total_probs = 0.0;
+
+  while true
+    line = fgetl(fid);
+    if !ischar(line)
+      break;
+    endif
+    if isempty(strtrim(line))
+      continue;
+    endif
+
+    s = jsondecode(line);
+    total_samples = total_samples + 1;
+
+    if isstruct(s.petri_net)
+      total_places = total_places + double(s.petri_net.places);
+      total_transitions = total_transitions + double(s.petri_net.transitions);
+    else
+      % s.petri_net is P x (2T + 1) matrix
+      total_places = total_places + double(size(s.petri_net, 1));
+      total_transitions = total_transitions + double((size(s.petri_net, 2) - 1) / 2);
+    endif
+
+    if isfield(s, "average_markings")
+      total_markings = total_markings + sum(double(s.average_markings(:)));
+    endif
+
+    if isfield(s, "steady_state_probs")
+      total_probs = total_probs + sum(double(s.steady_state_probs(:)));
+    endif
+  endwhile
+  fclose(fid);
+
+  if total_samples > 0
+    stats.num_samples = total_samples;
+    stats.avg_places = total_places / total_samples;
+    stats.avg_transitions = total_transitions / total_samples;
+    stats.avg_markings = total_markings / total_samples;
+    stats.avg_steady_state_probs = total_probs / total_samples;
   endif
 endfunction

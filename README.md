@@ -66,14 +66,3 @@ The main CLI generator supports the following flags:
 *   `--workers, -j <N>`: Parallel workers (`'auto'` or integer, default: `'auto'`).
 *   `--seed <N>`: RNG seed for reproducible generation.
 *   `--exact` / `--no-exact`: Ensure exact target sample count via retries (default: `--exact`).
-
----
-
-## Legacy Scripts (Standalone)
-
-For backward compatibility with initial iterations, standalone scripts are preserved at the repository root:
-- `generate_dataset.m`: Legacy dataset generator producing HDF5 `.h5` files.
-- `spn_generate_random.m`: Single SPN generation.
-- `filter_spn.m`: Property filtering.
-- `get_reachability_graph.m`: Basic reachability graph computation.
-- `test_suite.m`: Legacy test suite.

@@ -24,12 +24,14 @@ function variations = generate_petrinet_variations(pn, place_upper_bound, marks_
   for i = 1:num_variations
     var_pn = pn;
 
+    changed = false;
     if rand() < 0.5
       % Add tokens
       p = randi(P);
       if var_pn.initial_marking(p) < place_upper_bound
         var_pn.initial_marking(p) = var_pn.initial_marking(p) + 1;
         var_pn.matrix(p, m0_col) = var_pn.matrix(p, m0_col) + 1;
+        changed = true;
       endif
     else
       % Remove tokens
@@ -37,7 +39,12 @@ function variations = generate_petrinet_variations(pn, place_upper_bound, marks_
       if var_pn.initial_marking(p) > 0
         var_pn.initial_marking(p) = var_pn.initial_marking(p) - 1;
         var_pn.matrix(p, m0_col) = var_pn.matrix(p, m0_col) - 1;
+        changed = true;
       endif
+    endif
+
+    if !changed
+      continue;
     endif
 
     rg = generate_reachability_graph(var_pn, place_upper_bound, marks_upper_limit);

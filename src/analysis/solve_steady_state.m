@@ -63,5 +63,12 @@ function [probs, err] = solve_steady_state(arg1, arg2)
     probs = probs / prob_sum;
   else
     err = true;
+    return;
+  endif
+
+  % Residual verification: check that steady-state balance equation holds
+  residual = norm(A * probs - b, 1);
+  if isnan(residual) || isinf(residual) || residual > 1e-3
+    err = true;
   endif
 endfunction
