@@ -5,6 +5,10 @@ function run_tests()
   if !isempty(repo_root)
     addpath(repo_root);
     addpath(fullfile(repo_root, "tests"));
+    build_oct_dir = fullfile(repo_root, "build", "oct");
+    if exist(build_oct_dir, "dir")
+      addpath(build_oct_dir);
+    endif
   endif
   addpath(".");
 

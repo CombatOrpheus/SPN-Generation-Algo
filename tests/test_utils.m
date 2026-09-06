@@ -114,10 +114,72 @@ function test_utils()
   end_try_catch
   assert(caught_jsonl_err, "load_jsonl should throw error on missing file");
 
+  % 4. Test validate_config
+  % 4.1 Valid random config
+  valid_cfg = struct("generation_mode", "random", ...
+                     "num_places", 5, ...
+                     "num_transitions", 3, ...
+                     "num_samples", 10, ...
+                     "place_upper_bound", 10, ...
+                     "marks_lower_limit", 4, ...
+                     "marks_upper_limit", 50, ...
+                     "min_firing_rate", 1, ...
+                     "max_firing_rate", 10);
+  validate_config(valid_cfg); % Should pass without error
+
+  % 4.2 Valid grid config
+  valid_grid_cfg = valid_cfg;
+  valid_grid_cfg.generation_mode = "grid";
+  valid_grid_cfg.places_grid_boundaries = [5, 10];
+  valid_grid_cfg.markings_grid_boundaries = [4, 8, 12];
+  valid_grid_cfg.samples_per_grid = 5;
+  validate_config(valid_grid_cfg); % Should pass without error
+
+  % 4.3 Invalid mode
+  bad_cfg = valid_cfg;
+  bad_cfg.generation_mode = "unknown_mode";
+  assert_throws(@() validate_config(bad_cfg), "Invalid mode should fail");
+
+  % 4.4 Invalid places / transitions
+  bad_cfg = valid_cfg;
+  bad_cfg.num_places = 0;
+  assert_throws(@() validate_config(bad_cfg), "num_places < 1 should fail");
+
+  bad_cfg = valid_cfg;
+  bad_cfg.num_transitions = -1;
+  assert_throws(@() validate_config(bad_cfg), "num_transitions < 1 should fail");
+
+  % 4.5 Invalid marks bounds (upper < lower)
+  bad_cfg = valid_cfg;
+  bad_cfg.marks_lower_limit = 100;
+  bad_cfg.marks_upper_limit = 50;
+  assert_throws(@() validate_config(bad_cfg), "upper < lower should fail");
+
+  % 4.6 Invalid rates (max < min)
+  bad_cfg = valid_cfg;
+  bad_cfg.min_firing_rate = 10;
+  bad_cfg.max_firing_rate = 5;
+  assert_throws(@() validate_config(bad_cfg), "max_rate < min_rate should fail");
+
+  % 4.7 Invalid grid boundaries (unsorted)
+  bad_grid_cfg = valid_grid_cfg;
+  bad_grid_cfg.places_grid_boundaries = [10, 5];
+  assert_throws(@() validate_config(bad_grid_cfg), "Unsorted grid boundaries should fail");
+
   % Cleanup
   if exist(test_dir, "dir")
     rmdir(test_dir, "s");
   endif
 
   printf("test_utils PASSED\n");
+endfunction
+
+function assert_throws(fn, msg)
+  caught = false;
+  try
+    fn();
+  catch
+    caught = true;
+  end_try_catch
+  assert(caught, msg);
 endfunction

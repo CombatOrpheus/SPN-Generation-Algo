@@ -88,10 +88,13 @@ function main(varargin)
     config.num_workers = "auto";
   endif
 
+  % Validate configuration parameters before execution
+  validate_config(config);
+
   % Initialize RNG seed if configured
   if isfield(config, "seed") && !isempty(config.seed)
-    rand("seed", config.seed);
-    randn("seed", config.seed);
+    rand("state", config.seed);
+    randn("state", config.seed);
     printf("RNG seed initialized to: %d\n", config.seed);
   endif
 

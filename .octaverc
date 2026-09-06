@@ -5,3 +5,7 @@ if isempty(root_dir)
 endif
 addpath(genpath(fullfile(root_dir, 'src')));
 addpath(fullfile(root_dir, 'tests'));
+build_oct_dir = fullfile(root_dir, 'build', 'oct');
+if exist(build_oct_dir, 'dir')
+  addpath(build_oct_dir);
+endif

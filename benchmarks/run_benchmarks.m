@@ -1,8 +1,10 @@
 % run_benchmarks.m - Benchmarking suite matching SPN-Algo-Go benchmarks
 
 function run_benchmarks()
-  ignore_function_time_stamp("all");
   addpath("benchmarks");
+  if exist("build/oct", "dir")
+    addpath("build/oct");
+  endif
   printf("===================================================================\n");
 
   printf("  SPN-Algo-Octave Benchmarks (GNU Octave %s)\n", version());

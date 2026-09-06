@@ -1,19 +1,24 @@
-OCTS = src/generation/generate_reachability_graph_oct.oct \
-       src/generation/hash_marking_64_oct.oct \
-       src/petrinet/petrinet_prune_oct.oct
+OUT_DIR = build/oct
 
-all: $(OCTS)
+OCTS = $(OUT_DIR)/generate_reachability_graph_oct.oct \
+       $(OUT_DIR)/hash_marking_64_oct.oct \
+       $(OUT_DIR)/petrinet_prune_oct.oct
 
-src/generation/generate_reachability_graph_oct.oct: src/generation/generate_reachability_graph_oct.cc
+all: $(OUT_DIR) $(OCTS)
+
+$(OUT_DIR):
+	mkdir -p $(OUT_DIR)
+
+$(OUT_DIR)/generate_reachability_graph_oct.oct: src/generation/generate_reachability_graph_oct.cc | $(OUT_DIR)
 	mkoctfile -O3 $< -o $@
 
-src/generation/hash_marking_64_oct.oct: src/generation/hash_marking_64_oct.cc
+$(OUT_DIR)/hash_marking_64_oct.oct: src/generation/hash_marking_64_oct.cc | $(OUT_DIR)
 	mkoctfile -O3 $< -o $@
 
-src/petrinet/petrinet_prune_oct.oct: src/petrinet/petrinet_prune_oct.cc
+$(OUT_DIR)/petrinet_prune_oct.oct: src/petrinet/petrinet_prune_oct.cc | $(OUT_DIR)
 	mkoctfile -O3 $< -o $@
 
 clean:
-	rm -f src/generation/*.o src/generation/*.oct src/petrinet/*.o src/petrinet/*.oct
+	rm -rf build/
 
 .PHONY: all clean

@@ -2,7 +2,8 @@
 .octave_hist
 octave-workspace
 
-# Compiled C/C++ Oct-files
+# Compiled C/C++ Oct-files and build directory
+/build/
 *.oct
 *.o
 *.so
