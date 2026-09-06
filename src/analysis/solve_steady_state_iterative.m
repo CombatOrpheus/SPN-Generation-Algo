@@ -1,19 +1,39 @@
+## -*- texinfo -*-
+## @deftypefn {} {[@var{probs}, @var{err}] =} solve_steady_state_iterative (@var{rg}, @var{lambda_values})
+## @deftypefnx {} {[@var{probs}, @var{err}] =} solve_steady_state_iterative (@var{rg}, @var{lambda_values}, @var{max_iter}, @var{tol})
+## Solve for steady-state distribution using sparse uniformization power iteration.
+##
+## Computes the stationary probability vector @math{\pi} of the Continuous-Time
+## Markov Chain (CTMC) through uniformization into a discrete-time Markov chain.
+## Operates in @math{O(V)} memory and @math{O(|E|)} work per iteration, avoiding dense
+## matrix allocations.
+##
+## @table @asis
+## @item @var{rg}
+## Reachability graph struct containing vertices, edges, and transitions.
+##
+## @item @var{lambda_values}
+## Vector of firing rates for transitions.
+##
+## @item @var{max_iter}
+## Optional maximum power iterations (default: 50000).
+##
+## @item @var{tol}
+## Optional @math{L_1} convergence tolerance (default: 1e-10).
+## @end table
+##
+## Outputs:
+## @table @asis
+## @item @var{probs}
+## Column vector of length @math{V} with steady-state probabilities.
+##
+## @item @var{err}
+## Boolean flag (true if power iteration failed to converge within @var{max_iter}).
+## @end table
+##
+## @seealso{solve_steady_state, compute_state_equation}
+## @end deftypefn
 function [probs, err] = solve_steady_state_iterative(rg, lambda_values, max_iter, tol)
-  % SOLVE_STEADY_STATE_ITERATIVE Solves for steady-state distribution using sparse uniformization.
-  %
-  % Computes the steady-state probability distribution pi of the Continuous-Time
-  % Markov Chain (CTMC) using sparse uniformization (power iteration). Operates with
-  % O(V) memory and O(|E|) work per iteration, scaling to large reachability graphs.
-  %
-  % Inputs:
-  %   rg            - Reachability graph struct (vertices, edges, arc_transitions, num_vertices, num_edges)
-  %   lambda_values - Column/row vector of firing rates for transitions (1-based indices)
-  %   max_iter      - (Optional) Maximum power iterations (default: 50000)
-  %   tol           - (Optional) L1 convergence tolerance (default: 1e-10)
-  %
-  % Outputs:
-  %   probs         - V x 1 column vector of steady-state probabilities
-  %   err           - Boolean flag (true if failed to converge, false on success)
 
   if nargin < 3 || isempty(max_iter)
     max_iter = 50000;

@@ -4,21 +4,45 @@
 ## Keywords: stochastic petri nets, sample generation, chunk worker
 
 ## -*- texinfo -*-
-## @deftypefn {} {[@var{generated_count}, @var{attempts}, @var{results}] =} generate_samples_chunk (@var{config}, @var{target_samples}, @var{output_file}, @var{worker_id}, @var{quiet})
+## @deftypefn {} {[@var{generated_count}, @var{attempts}, @var{results}] =} generate_samples_chunk (@var{config}, @var{target_samples}, @var{output_file})
+## @deftypefnx {} {[@var{generated_count}, @var{attempts}, @var{results}] =} generate_samples_chunk (@var{config}, @var{target_samples}, @var{output_file}, @var{worker_id})
+## @deftypefnx {} {[@var{generated_count}, @var{attempts}, @var{results}] =} generate_samples_chunk (@var{config}, @var{target_samples}, @var{output_file}, @var{worker_id}, @var{quiet})
+## Generate a chunk of valid SPN samples and stream records to JSONL.
 ##
-## Generate a chunk of @var{target_samples} valid SPN samples and write them to @var{output_file}.
+## Iteratively generates connected random Petri nets, prunes edges, constructs reachability
+## graphs, and computes steady-state distributions, appending valid nets meeting boundedness
+## criteria directly to @var{output_file}.
 ##
-## Inputs:
-##   @var{config}: Configuration struct specifying net and analysis parameters
-##   @var{target_samples}: Number of valid samples to generate
-##   @var{output_file}: Destination filepath to write JSONL lines
-##   @var{worker_id}: Optional worker identifier for logging (default: 1)
-##   @var{quiet}: Optional flag to silence progress reporting (default: false)
+## @table @asis
+## @item @var{config}
+## Configuration struct specifying net dimensions and exploration limits.
+##
+## @item @var{target_samples}
+## Number of valid samples to generate.
+##
+## @item @var{output_file}
+## Destination file path for JSONL records.
+##
+## @item @var{worker_id}
+## Optional worker identifier for logging (default: 1).
+##
+## @item @var{quiet}
+## Optional boolean flag to silence progress reporting (default: false).
+## @end table
 ##
 ## Outputs:
-##   @var{generated_count}: Number of valid samples generated and written
-##   @var{attempts}: Total number of generation attempts performed
-##   @var{results}: Cell array of summary structs (for statistics reporting)
+## @table @asis
+## @item @var{generated_count}
+## Number of valid samples generated and written.
+##
+## @item @var{attempts}
+## Total generation attempts performed.
+##
+## @item @var{results}
+## Cell array of sample summary structs for reporting.
+## @end table
+##
+## @seealso{generate_parallel_dataset, write_sample_jsonl}
 ## @end deftypefn
 
 function [generated_count, attempts, results] = generate_samples_chunk(config, target_samples, output_file, worker_id, quiet)

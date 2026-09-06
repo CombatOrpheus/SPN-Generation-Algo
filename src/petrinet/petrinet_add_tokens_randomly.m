@@ -1,7 +1,20 @@
+## -*- texinfo -*-
+## @deftypefn {} {@var{pn} =} petrinet_add_tokens_randomly (@var{pn})
+## Vectorized addition of tokens to places in a Petri net.
+##
+## Adds 1 token to each place with independent 30% probability without interpreted loops.
+## Updates both @code{pn.matrix} initial marking column and @code{pn.initial_marking}.
+##
+## @table @asis
+## @item @var{pn}
+## Petri net struct created by @code{petrinet_new}.
+## @end table
+##
+## Returns updated Petri net struct @var{pn}.
+##
+## @seealso{petrinet_new, petrinet_generate_random}
+## @end deftypefn
 function pn = petrinet_add_tokens_randomly(pn)
-  % PETRINET_ADD_TOKENS_RANDOMLY Vectorized addition of tokens to places.
-  %
-  % Adds 1 token to each place with 30% probability without interpreted loops.
 
   P = pn.places;
   T = pn.transitions;

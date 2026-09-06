@@ -1,5 +1,21 @@
+## -*- texinfo -*-
+## @deftypefn {} {} save_json (@var{filepath}, @var{data})
+## Encode and save data structure to a JSON file.
+##
+## Encodes @var{data} via @code{jsonencode}, creates parent directories if needed,
+## and writes formatted JSON to @var{filepath}.
+##
+## @table @asis
+## @item @var{filepath}
+## Destination file path.
+##
+## @item @var{data}
+## Data structure, array, or cell array to serialize.
+## @end table
+##
+## @seealso{load_json, write_sample_jsonl}
+## @end deftypefn
 function save_json(filepath, data)
-  % SAVE_JSON Encode and save data to a JSON file.
   json_str = jsonencode(data);
   % Create directory if it doesn't exist
   dir_path = fileparts(filepath);

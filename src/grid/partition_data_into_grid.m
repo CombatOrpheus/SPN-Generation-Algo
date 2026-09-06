@@ -1,12 +1,30 @@
+## -*- texinfo -*-
+## @deftypefn {} {} partition_data_into_grid (@var{grid_dir}, @var{accumulate_data}, @var{raw_data_path}, @var{places_boundaries}, @var{markings_boundaries})
+## Partition raw SPN dataset into a 2D place-marking grid directory structure.
+##
+## Stratifies samples across two dimensions (number of places and number of reachable markings)
+## into directories @file{p@{i@}/m@{j@}/}, writing separate JSON files per net.
+##
+## @table @asis
+## @item @var{grid_dir}
+## Root output directory for grid partitions.
+##
+## @item @var{accumulate_data}
+## Logical scalar. If true, updates existing bins without clearing previous count matrices.
+##
+## @item @var{raw_data_path}
+## Path to source JSONL dataset file.
+##
+## @item @var{places_boundaries}
+## Ascending vector of boundary thresholds defining place bins.
+##
+## @item @var{markings_boundaries}
+## Ascending vector of boundary thresholds defining marking count bins.
+## @end table
+##
+## @seealso{sample_and_transform_data}
+## @end deftypefn
 function partition_data_into_grid(grid_dir, accumulate_data, raw_data_path, places_boundaries, markings_boundaries)
-  % PARTITION_DATA_INTO_GRID Partitions raw SPN dataset into a 2D place-marking grid.
-  %
-  % Inputs:
-  %   grid_dir            - Root directory for grid bins
-  %   accumulate_data     - Boolean flag to accumulate or reset existing counts
-  %   raw_data_path       - Path to raw JSONL file
-  %   places_boundaries   - Vector of place count bin boundaries
-  %   markings_boundaries - Vector of marking count bin boundaries
 
   num_p_bins = length(places_boundaries) + 1;
   num_m_bins = length(markings_boundaries) + 1;

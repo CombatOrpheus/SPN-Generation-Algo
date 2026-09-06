@@ -1,5 +1,32 @@
-% main.m - Entry point for SPN Benchmark Dataset Generator in GNU Octave
-
+## -*- texinfo -*-
+## @deftypefn {} {} main (@var{varargin})
+## CLI and program entry point for SPN Benchmark Dataset Generator.
+##
+## Parses command-line arguments, validates configurations, sets up reproducible RNG seeds,
+## and invokes the parallel dataset generation pipeline.
+##
+## Supported command-line options:
+## @table @option
+## @item --config <path>
+## Path to JSON configuration file (default: @file{config.json}).
+## @item --workers <N>, -j <N>
+## Number of worker processes ("auto", 1, or integer).
+## @item --mode <mode>
+## Generation mode: "random" or "grid".
+## @item --samples <N>
+## Number of valid samples to generate.
+## @item --output <path>
+## Output file destination path (.jsonl).
+## @item --seed <N>
+## Integer RNG seed for reproducible generation.
+## @item --exact
+## Generate exactly @var{samples} nets without rate variations.
+## @item --report <path>
+## Optional HTML summary report path.
+## @end table
+##
+## @seealso{generate_parallel_dataset, validate_config}
+## @end deftypefn
 function main(varargin)
   ignore_function_time_stamp("all");
 

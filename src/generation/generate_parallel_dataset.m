@@ -4,18 +4,36 @@
 ## Keywords: stochastic petri nets, parallel processing, multiprocessing
 
 ## -*- texinfo -*-
-## @deftypefn {} {[@var{total_written}, @var{stats}] =} generate_parallel_dataset (@var{config}, @var{num_workers}, @var{output_file})
-##
+## @deftypefn {} {[@var{total_written}, @var{stats}] =} generate_parallel_dataset (@var{config})
+## @deftypefnx {} {[@var{total_written}, @var{stats}] =} generate_parallel_dataset (@var{config}, @var{num_workers})
+## @deftypefnx {} {[@var{total_written}, @var{stats}] =} generate_parallel_dataset (@var{config}, @var{num_workers}, @var{output_file})
 ## Generate an SPN dataset in parallel using POSIX fork and waitpid multiprocessing.
 ##
-## Inputs:
-##   @var{config}: Generation and analysis configuration struct
-##   @var{num_workers}: Number of parallel worker processes ("auto", integer, or 1 for sequential)
-##   @var{output_file}: Target destination filepath for final combined JSONL dataset
+## Spawns worker processes that independently generate valid bounded Stochastic Petri Nets,
+## compute reachability graphs and steady-state distributions, and stream JSONL output.
+## When POSIX fork is unavailable or on Windows, gracefully falls back to sequential execution.
+##
+## @table @asis
+## @item @var{config}
+## Generation and analysis configuration struct.
+##
+## @item @var{num_workers}
+## Number of parallel worker processes ("auto", positive integer, or 1 for sequential).
+##
+## @item @var{output_file}
+## Target destination filepath for final combined JSONL dataset.
+## @end table
 ##
 ## Outputs:
-##   @var{total_written}: Total number of valid samples written to @var{output_file}
-##   @var{stats}: Computed dataset summary statistics struct
+## @table @asis
+## @item @var{total_written}
+## Total number of valid samples written to @var{output_file}.
+##
+## @item @var{stats}
+## Computed dataset summary statistics struct.
+## @end table
+##
+## @seealso{generate_samples_chunk, validate_config, calculate_stats}
 ## @end deftypefn
 
 function [total_written, stats] = generate_parallel_dataset(config, num_workers, output_file)

@@ -1,12 +1,21 @@
+## -*- texinfo -*-
+## @deftypefn {} {@var{stats} =} calculate_stats (@var{results})
+## Compute aggregated statistics across generated SPN samples.
+##
+## Summarizes metrics including total sample count, average place count, average
+## transition count, average token count across places, and average steady-state probability.
+##
+## @table @asis
+## @item @var{results}
+## Cell array of sample structs containing @code{num_places}, @code{num_transitions},
+## and optionally @code{average_markings} and @code{steady_state_probs}.
+## @end table
+##
+## Returns struct @var{stats} containing the computed averages.
+##
+## @seealso{generate_parallel_dataset, generate_html_report}
+## @end deftypefn
 function stats = calculate_stats(results)
-  % CALCULATE_STATS Computes aggregated statistics across generated samples.
-  %
-  % Inputs:
-  %   results - Cell array of structs with fields:
-  %             num_places, num_transitions, average_markings, steady_state_probs
-  %
-  % Outputs:
-  %   stats - Struct containing summary metrics
 
   stats = struct();
   n = length(results);

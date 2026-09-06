@@ -1,14 +1,32 @@
+## -*- texinfo -*-
+## @deftypefn {} {[@var{avg_markings}, @var{marking_densities}] =} compute_average_markings (@var{rg}, @var{steady_state_probs})
+## Compute average token counts and probability distributions per place.
+##
+## Computes expected token occupancy and discrete probability density distributions
+## for each place in the Petri net given the steady-state probability distribution
+## of the continuous-time Markov chain.
+##
+## @table @asis
+## @item @var{rg}
+## Reachability graph struct containing marking @code{vertices}.
+##
+## @item @var{steady_state_probs}
+## Column vector of length @math{V} with steady-state state probabilities.
+## @end table
+##
+## Outputs:
+## @table @asis
+## @item @var{avg_markings}
+## Column vector of length @math{P} containing average token counts for each place.
+##
+## @item @var{marking_densities}
+## Cell array of length @math{P}, where entry @math{\{p\}} contains a vector of
+## probabilities for token counts @math{0, 1, \dots, \max(\mathrm{tokens})}.
+## @end table
+##
+## @seealso{solve_steady_state, generate_reachability_graph}
+## @end deftypefn
 function [avg_markings, marking_densities] = compute_average_markings(rg, steady_state_probs)
-  % COMPUTE_AVERAGE_MARKINGS Computes average token counts and probability densities per place.
-  %
-  % Inputs:
-  %   rg                 - Reachability graph struct with vertices matrix
-  %   steady_state_probs - Vector of steady-state probabilities (length V)
-  %
-  % Outputs:
-  %   avg_markings       - Column vector of length P with average tokens per place
-  %   marking_densities  - Cell array of length P, where cell {p} contains probabilities
-  %                        for tokens 0, 1, ..., max_tokens in place p.
 
   if rg.num_vertices == 0
     avg_markings = [];

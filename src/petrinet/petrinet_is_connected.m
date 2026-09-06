@@ -1,9 +1,23 @@
+## -*- texinfo -*-
+## @deftypefn {} {@var{connected} =} petrinet_is_connected (@var{pn})
+## Check if a Petri net structure is connected.
+##
+## A Petri net is considered connected if its underlying undirected bipartite graph
+## is connected (all places and transitions belong to a single connected component)
+## and there are no isolated nodes.
+##
+## Traversal is carried out via a fast breadth-first search (BFS) queue.
+##
+## @table @asis
+## @item @var{pn}
+## Petri net struct created by @code{petrinet_new}.
+## @end table
+##
+## Returns boolean true if connected, false otherwise.
+##
+## @seealso{petrinet_new, petrinet_generate_random, petrinet_prune}
+## @end deftypefn
 function connected = petrinet_is_connected(pn)
-  % PETRINET_IS_CONNECTED Check if a Petri net is connected.
-  %
-  % A Petri net is connected if its underlying undirected bipartite graph
-  % is connected (all places and transitions are mutually reachable via incident arcs)
-  % and there are no isolated nodes.
 
   P = pn.places;
   T = pn.transitions;

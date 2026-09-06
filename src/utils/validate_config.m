@@ -1,11 +1,18 @@
+## -*- texinfo -*-
+## @deftypefn {} {} validate_config (@var{config})
+## Validate dataset generation and analysis configuration struct.
+##
+## Checks configuration integrity, field presence, data types, and logical value bounds
+## before execution starts. Throws an informative error if any validation check fails.
+##
+## @table @asis
+## @item @var{config}
+## Struct representing configuration loaded from JSON or CLI options.
+## @end table
+##
+## @seealso{load_json, generate_parallel_dataset}
+## @end deftypefn
 function validate_config(config)
-  % VALIDATE_CONFIG Validates dataset generation and analysis configuration struct.
-  %
-  % Syntax:
-  %   validate_config(config)
-  %
-  % Throws an informative error if any required configuration field is missing,
-  % has an invalid data type, or violates logical value bounds.
 
   if !isstruct(config)
     error("validate_config: Configuration must be a struct.");

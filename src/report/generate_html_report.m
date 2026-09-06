@@ -1,5 +1,21 @@
+## -*- texinfo -*-
+## @deftypefn {} {} generate_html_report (@var{filepath}, @var{stats})
+## Write an HTML summary report of the generated SPN dataset.
+##
+## Produces a styled standalone HTML page presenting dataset metrics such as sample
+## counts and structural averages.
+##
+## @table @asis
+## @item @var{filepath}
+## Destination file path for the HTML report.
+##
+## @item @var{stats}
+## Struct containing dataset metrics (produced by @code{calculate_stats} or @code{generate_parallel_dataset}).
+## @end table
+##
+## @seealso{calculate_stats, generate_parallel_dataset}
+## @end deftypefn
 function generate_html_report(filepath, stats)
-  % GENERATE_HTML_REPORT Writes an HTML summary report of the dataset.
 
   fid = fopen(filepath, "w");
   if fid < 0

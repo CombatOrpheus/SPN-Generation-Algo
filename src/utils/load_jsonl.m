@@ -1,7 +1,20 @@
+## -*- texinfo -*-
+## @deftypefn {} {@var{items} =} load_jsonl (@var{filepath})
+## Read a JSON Lines (JSONL) file into a cell array of structs.
+##
+## Parses each non-empty newline-delimited line via @code{jsondecode}. Uses geometric
+## chunk preallocation for efficiency on large dataset files.
+##
+## @table @asis
+## @item @var{filepath}
+## Path to the target JSONL dataset file.
+## @end table
+##
+## Returns cell array of decoded item structs.
+##
+## @seealso{load_json, write_sample_jsonl}
+## @end deftypefn
 function items = load_jsonl(filepath)
-  % LOAD_JSONL Reads a JSONL file and decodes each line into a cell array of structs.
-  %
-  % Preallocates cell array in chunks to avoid single-element organic expansion.
 
   fid = fopen(filepath, "r");
   if fid < 0

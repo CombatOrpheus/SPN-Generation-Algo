@@ -1,7 +1,35 @@
+## -*- texinfo -*-
+## @deftypefn {} {} write_sample_jsonl (@var{fid_or_path}, @var{pn}, @var{rg}, @var{lambda_values}, @var{steady_state_probs}, @var{avg_markings}, @var{marking_densities})
+## Format and write a single SPN sample to a JSONL dataset stream or file.
+##
+## Produces a JSON record maintaining strict schema parity with @file{SPN-Algo-Go}.
+##
+## @table @asis
+## @item @var{fid_or_path}
+## Open file descriptor integer or target string file path.
+##
+## @item @var{pn}
+## Petri net struct.
+##
+## @item @var{rg}
+## Reachability graph struct.
+##
+## @item @var{lambda_values}
+## Vector of transition firing rates.
+##
+## @item @var{steady_state_probs}
+## Vector of steady-state marking probabilities.
+##
+## @item @var{avg_markings}
+## Vector of average place token counts.
+##
+## @item @var{marking_densities}
+## Cell array of discrete token probability densities per place.
+## @end table
+##
+## @seealso{load_jsonl, generate_samples_chunk}
+## @end deftypefn
 function write_sample_jsonl(fid_or_path, pn, rg, lambda_values, steady_state_probs, avg_markings, marking_densities)
-  % WRITE_SAMPLE_JSONL Formats and writes a single sample to a JSONL file.
-  %
-  % Matches the exact JSON structure of SPN-Algo-Go / SPN-Benchmark-DS.
 
   close_on_exit = false;
   if ischar(fid_or_path)

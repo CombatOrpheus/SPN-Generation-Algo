@@ -1,23 +1,47 @@
+## -*- texinfo -*-
+## @deftypefn {} {@var{rg} =} generate_reachability_graph (@var{pn}, @var{place_upper_limit}, @var{max_markings_to_explore})
+## @deftypefnx {} {@var{rg} =} generate_reachability_graph (@var{pn}, @var{place_upper_limit}, @var{max_markings_to_explore}, @var{force_pure_octave})
+## Generate reachability graph of a Petri net using BFS state-space exploration.
+##
+## Traverses the marking graph starting from @code{pn.initial_marking}. When compiled,
+## uses the C++ extension @file{generate_reachability_graph_oct} with Robin Hood
+## hash tables for high throughput.
+##
+## @table @asis
+## @item @var{pn}
+## Petri net struct created by @code{petrinet_new}.
+##
+## @item @var{place_upper_limit}
+## Positive integer token threshold. If any place exceeds this capacity in an explored
+## marking, the net is considered unbounded and exploration aborts.
+##
+## @item @var{max_markings_to_explore}
+## Positive integer upper limit on discovered markings before marking graph is flagged
+## as unbounded/exceeded.
+##
+## @item @var{force_pure_octave}
+## Optional boolean flag (default: false). When true, bypasses compiled oct-file.
+## @end table
+##
+## Returns struct @var{rg} containing:
+## @table @asis
+## @item @code{vertices}
+## @math{V \times P} matrix of reachable markings.
+## @item @code{edges}
+## @math{E \times 2} matrix of 1-based source and destination vertex indices.
+## @item @code{arc_transitions}
+## @math{E \times 1} vector of 1-based firing transition indices.
+## @item @code{num_vertices}
+## Number of explored reachable markings @math{V}.
+## @item @code{num_edges}
+## Number of state transitions @math{E}.
+## @item @code{is_bounded}
+## Boolean flag indicating whether the state space is bounded within the limits.
+## @end table
+##
+## @seealso{petrinet_new, hash_marking_64, generate_parallel_dataset}
+## @end deftypefn
 function rg = generate_reachability_graph(pn, place_upper_limit, max_markings_to_explore, force_pure_octave)
-  % GENERATE_REACHABILITY_GRAPH Generates reachability graph of a Petri net using BFS.
-  %
-  % Uses C++ mkoctfile accelerated implementation when available, or pure Octave fallback.
-  %
-  % Inputs:
-  %   pn                      - Petri net struct (from petrinet_new / petrinet_generate_random)
-  %   place_upper_limit       - Maximum allowable tokens per place before considered unbounded
-  %   max_markings_to_explore - Maximum states to explore before considered unbounded
-  %   force_pure_octave       - Optional boolean to force pure Octave BFS implementation
-  %
-  % Outputs:
-  %   rg - Struct with fields:
-  %     vertices        - V x P matrix (each row is a marking)
-  %     edges           - E x 2 matrix (1-based source and target vertex indices)
-  %     arc_transitions - E x 1 matrix (1-based transition indices)
-  %     num_vertices    - Total vertices count
-  %     num_edges       - Total edges count
-  %     is_bounded      - Logical flag (true if bounded)
-
   if nargin < 4
     force_pure_octave = false;
   endif

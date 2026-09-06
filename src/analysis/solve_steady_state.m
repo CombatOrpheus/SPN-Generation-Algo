@@ -1,11 +1,28 @@
+## -*- texinfo -*-
+## @deftypefn  {} {[@var{probs}, @var{err}] =} solve_steady_state (@var{rg}, @var{lambda_values})
+## @deftypefnx {} {[@var{probs}, @var{err}] =} solve_steady_state (@var{state_matrix}, @var{target_vector})
+## Solve for steady-state probabilities of the continuous-time Markov chain.
+##
+## Polymorphic solver supporting:
+## @enumerate
+## @item @code{solve_steady_state(rg, lambda_values)}: Executes sparse iterative uniformization
+## (power iteration) in $O(V)$ memory, falling back to direct LU decomposition if necessary.
+## @item @code{solve_steady_state(state_matrix, target_vector)}: Solves the linear system
+## directly via LU decomposition.
+## @end enumerate
+##
+## Outputs:
+## @table @asis
+## @item @var{probs}
+## Column vector of length @math{V} with the computed probability distribution.
+##
+## @item @var{err}
+## Boolean flag indicating whether computation encountered a singularity or convergence error.
+## @end table
+##
+## @seealso{solve_steady_state_iterative, compute_state_equation, compute_average_markings}
+## @end deftypefn
 function [probs, err] = solve_steady_state(arg1, arg2)
-  % SOLVE_STEADY_STATE Solves for steady-state probabilities of the Markov chain.
-  %
-  % Polymorphic interface supporting:
-  %   1. [probs, err] = solve_steady_state(rg, lambda_values)
-  %      Uses fast sparse iterative uniformization (power iteration), falling back to LU.
-  %   2. [probs, err] = solve_steady_state(state_matrix, target_vector)
-  %      Solves the linear system using direct LU decomposition.
 
   if isstruct(arg1)
     % Called as solve_steady_state(rg, lambda_values)

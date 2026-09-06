@@ -1,7 +1,27 @@
+## -*- texinfo -*-
+## @deftypefn {} {@var{pn} =} petrinet_prune (@var{pn})
+## @deftypefnx {} {@var{pn} =} petrinet_prune (@var{pn}, @var{force_pure_octave})
+## Prune Petri net edges while preserving bipartite connectivity.
+##
+## Prunes excessive arcs from places and transitions (targeting degrees $\le 2$)
+## and adds missing connections to eliminate isolated components. Uses high-performance
+## C++ extension (@file{petrinet_prune_oct}) when compiled, with an $O(1)$ degree-tracking
+## pure Octave fallback.
+##
+## @table @asis
+## @item @var{pn}
+## Petri net struct created by @code{petrinet_new}.
+##
+## @item @var{force_pure_octave}
+## Optional boolean flag (default: false). When true, bypasses the compiled
+## C++ oct-file and executes the pure Octave pruning algorithm.
+## @end table
+##
+## Returns pruned Petri net struct @var{pn}.
+##
+## @seealso{petrinet_new, petrinet_generate_random, petrinet_is_connected}
+## @end deftypefn
 function pn = petrinet_prune(pn, force_pure_octave)
-  % PETRINET_PRUNE Prunes the Petri net removing excess edges and adding missing connections.
-  %
-  % Uses C++ mkoctfile acceleration when available with fast O(1) sum tracking fallback.
 
   if nargin < 2
     force_pure_octave = false;

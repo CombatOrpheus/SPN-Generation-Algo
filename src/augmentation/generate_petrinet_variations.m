@@ -1,17 +1,39 @@
+## -*- texinfo -*-
+## @deftypefn {} {@var{variations} =} generate_petrinet_variations (@var{pn}, @var{place_upper_bound}, @var{marks_lower_limit}, @var{marks_upper_limit}, @var{num_variations}, @var{min_firing_rate}, @var{max_firing_rate})
+## Generate topological variations of a Petri net by adding or removing tokens.
+##
+## Perturbs the initial marking of @var{pn} by adding or decrementing tokens,
+## recomputing reachability graphs and accepting variants whose state-space size
+## falls strictly within [@var{marks_lower_limit}, @var{marks_upper_limit}].
+##
+## @table @asis
+## @item @var{pn}
+## Base Petri net struct.
+##
+## @item @var{place_upper_bound}
+## Maximum token capacity per place during reachability exploration.
+##
+## @item @var{marks_lower_limit}
+## Minimum required markings in reachability graph.
+##
+## @item @var{marks_upper_limit}
+## Maximum allowable markings in reachability graph.
+##
+## @item @var{num_variations}
+## Target number of variations to attempt.
+##
+## @item @var{min_firing_rate}
+## Minimum transition firing rate for CTMC solving.
+##
+## @item @var{max_firing_rate}
+## Maximum transition firing rate for CTMC solving.
+## @end table
+##
+## Returns cell array of variation structs.
+##
+## @seealso{generate_lambda_variations, generate_reachability_graph}
+## @end deftypefn
 function variations = generate_petrinet_variations(pn, place_upper_bound, marks_lower_limit, marks_upper_limit, num_variations, min_firing_rate, max_firing_rate)
-  % GENERATE_PETRINET_VARIATIONS Generates variations of a Petri net by adding/removing tokens.
-  %
-  % Inputs:
-  %   pn                - Base Petri net struct
-  %   place_upper_bound - Maximum tokens allowed per place
-  %   marks_lower_limit - Minimum required markings in reachability graph
-  %   marks_upper_limit - Maximum allowable markings in reachability graph
-  %   num_variations    - Number of variations to attempt to generate
-  %   min_firing_rate   - Minimum firing rate
-  %   max_firing_rate   - Maximum firing rate
-  %
-  % Outputs:
-  %   variations - Cell array of variation structs
 
   % Pre-allocate variations cell array
   variations = cell(num_variations, 1);

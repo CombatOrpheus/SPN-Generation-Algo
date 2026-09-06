@@ -1,13 +1,31 @@
+## -*- texinfo -*-
+## @deftypefn {} {[@var{state_matrix}, @var{target_vector}] =} compute_state_equation (@var{rg}, @var{lambda_values})
+## Compute infinitesimal generator state equation for the SPN.
+##
+## Constructs the augmented transpose generator matrix @math{Q^T} and target vector
+## enforcing the steady-state equation @math{\pi Q = 0} alongside the normalization
+## constraint @math{\sum \pi_i = 1}.
+##
+## @table @asis
+## @item @var{rg}
+## Reachability graph struct (@code{vertices}, @code{edges}, @code{arc_transitions}).
+##
+## @item @var{lambda_values}
+## Vector of transition firing rates.
+## @end table
+##
+## Outputs:
+## @table @asis
+## @item @var{state_matrix}
+## Sparse @math{(V+1) \times V} matrix representing @math{Q^T} with probability sum constraint row.
+##
+## @item @var{target_vector}
+## Column vector of length @math{V+1} with zeros and 1.0 at index @math{V+1}.
+## @end table
+##
+## @seealso{solve_steady_state, solve_steady_state_iterative}
+## @end deftypefn
 function [state_matrix, target_vector] = compute_state_equation(rg, lambda_values)
-  % COMPUTE_STATE_EQUATION Computes infinitesimal generator state equation for the SPN.
-  %
-  % Inputs:
-  %   rg            - Reachability graph struct (vertices, edges, arc_transitions)
-  %   lambda_values - Vector of firing rates for transitions (1-based indices)
-  %
-  % Outputs:
-  %   state_matrix  - (V+1) x V matrix representing Q^T with probability sum row
-  %   target_vector - (V+1) x 1 vector with 1 at the last entry
 
   V = rg.num_vertices;
   target_vector = zeros(V + 1, 1);

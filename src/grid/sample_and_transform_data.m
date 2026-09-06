@@ -1,15 +1,33 @@
+## -*- texinfo -*-
+## @deftypefn {} {@var{transformed_samples} =} sample_and_transform_data (@var{grid_dir}, @var{samples_per_grid}, @var{lambda_variations_per_sample}, @var{min_firing_rate}, @var{max_firing_rate})
+## Sample Petri nets from 2D grid cells and generate rate variations.
+##
+## Traverses stratified grid bins in @var{grid_dir}, selecting up to @var{samples_per_grid}
+## samples per cell, and generating @var{lambda_variations_per_sample} parameter variations
+## per sampled net.
+##
+## @table @asis
+## @item @var{grid_dir}
+## Root directory of partitioned grid.
+##
+## @item @var{samples_per_grid}
+## Number of base Petri net samples to draw from each grid bin.
+##
+## @item @var{lambda_variations_per_sample}
+## Number of firing rate variations to generate for each drawn sample.
+##
+## @item @var{min_firing_rate}
+## Minimum firing rate for varied transitions.
+##
+## @item @var{max_firing_rate}
+## Maximum firing rate for varied transitions.
+## @end table
+##
+## Returns cell array of augmented sample structs.
+##
+## @seealso{partition_data_into_grid, generate_lambda_variations}
+## @end deftypefn
 function transformed_samples = sample_and_transform_data(grid_dir, samples_per_grid, lambda_variations_per_sample, min_firing_rate, max_firing_rate)
-  % SAMPLE_AND_TRANSFORM_DATA Samples Petri nets from grid cells and generates variations.
-  %
-  % Inputs:
-  %   grid_dir                     - Root directory of partitioned grid
-  %   samples_per_grid             - Number of samples to take per cell
-  %   lambda_variations_per_sample - Number of lambda rate variations to generate per sample
-  %   min_firing_rate              - Minimum firing rate
-  %   max_firing_rate              - Maximum firing rate
-  %
-  % Outputs:
-  %   transformed_samples          - Cell array of transformed sample structs
 
   config_path = fullfile(grid_dir, "config.json");
   if !exist(config_path, "file")

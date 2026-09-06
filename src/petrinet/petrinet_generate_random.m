@@ -1,12 +1,24 @@
+## -*- texinfo -*-
+## @deftypefn {} {@var{pn} =} petrinet_generate_random (@var{num_places}, @var{num_transitions})
+## Generate a connected random Petri Net structure.
+##
+## Constructs a randomly connected bipartite graph between @var{num_places} places
+## and @var{num_transitions} transitions by incrementally attaching remaining
+## unvisited nodes to the spanning subgraph, ensuring global structural connectivity.
+##
+## @table @asis
+## @item @var{num_places}
+## Number of places in the net (@math{P \ge 1}).
+##
+## @item @var{num_transitions}
+## Number of transitions in the net (@math{T \ge 1}).
+## @end table
+##
+## Returns the initialized Petri net struct @var{pn}.
+##
+## @seealso{petrinet_new, petrinet_is_connected, petrinet_prune, petrinet_add_tokens_randomly}
+## @end deftypefn
 function pn = petrinet_generate_random(num_places, num_transitions)
-  % PETRINET_GENERATE_RANDOM Generates a connected random Petri Net structure.
-  %
-  % Inputs:
-  %   num_places      - Integer, number of places (P)
-  %   num_transitions - Integer, number of transitions (T)
-  %
-  % Outputs:
-  %   pn - Petri net struct with matrix and initial marking
 
   P = int32(num_places);
   T = int32(num_transitions);

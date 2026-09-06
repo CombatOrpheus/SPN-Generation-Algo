@@ -1,16 +1,39 @@
+## -*- texinfo -*-
+## @deftypefn {} {[@var{variations}, @var{lambda_values_list}] =} generate_lambda_variations (@var{pn}, @var{rg}, @var{num_variations}, @var{min_firing_rate}, @var{max_firing_rate})
+## Generate variations by altering transition firing rates.
+##
+## Computes alternative steady-state solutions on the fixed reachability graph @var{rg}
+## under perturbed transition firing rate vectors $\lambda$.
+##
+## @table @asis
+## @item @var{pn}
+## Petri net struct.
+##
+## @item @var{rg}
+## Reachability graph struct.
+##
+## @item @var{num_variations}
+## Integer target number of variations.
+##
+## @item @var{min_firing_rate}
+## Lower bound for randomly generated firing rates.
+##
+## @item @var{max_firing_rate}
+## Upper bound for randomly generated firing rates.
+## @end table
+##
+## Outputs:
+## @table @asis
+## @item @var{variations}
+## Cell array of variation structs containing updated steady-state solutions and average markings.
+##
+## @item @var{lambda_values_list}
+## Cell array of generated transition firing rate vectors.
+## @end table
+##
+## @seealso{generate_petrinet_variations, solve_steady_state}
+## @end deftypefn
 function [variations, lambda_values_list] = generate_lambda_variations(pn, rg, num_variations, min_firing_rate, max_firing_rate)
-  % GENERATE_LAMBDA_VARIATIONS Generates variations by altering transition firing rates.
-  %
-  % Inputs:
-  %   pn                 - Petri net struct
-  %   rg                 - Reachability graph struct
-  %   num_variations     - Number of variations to generate
-  %   min_firing_rate    - Minimum firing rate
-  %   max_firing_rate    - Maximum firing rate
-  %
-  % Outputs:
-  %   variations         - Cell array of variation structs
-  %   lambda_values_list - Cell array of lambda vectors
 
   % Pre-allocate output cell arrays
   variations = cell(num_variations, 1);
