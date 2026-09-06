@@ -1,0 +1,7 @@
+% Automatically add src and tests directories to Octave search path
+root_dir = fileparts(mfilename('fullpath'));
+if isempty(root_dir)
+  root_dir = pwd();
+endif
+addpath(genpath(fullfile(root_dir, 'src')));
+addpath(fullfile(root_dir, 'tests'));

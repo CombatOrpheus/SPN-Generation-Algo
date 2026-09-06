@@ -1,82 +1,79 @@
 # Stochastic Petri Net (SPN) Generation Toolkit
 
-This repository provides a set of functions written in Octave for generating, analyzing, and filtering Stochastic Petri Nets (SPNs). It is primarily designed to create benchmark datasets for SPN learning algorithms, as described in the paper "The Benchmark Datasets for Stochastic Petri Net Learning."
+Implementation of the Stochastic Petri Net (SPN) generation, analysis, and dataset benchmarking algorithm in GNU Octave, featuring C++ `oct` acceleration, parallel multiprocessing, and full architectural parity with `SPN-Algo-Go`.
 
-This implementation was developed as a learning exercise to better understand the algorithm's mechanics and to explore potential performance improvements over the original Python-based reference implementation.
+## Modern Architecture & High-Performance Generator
 
-## Features
+The modular implementation is located in `src/` with entry point `main.m` and configuration in `config.json`:
 
--   **SPN Generation**: Create random SPNs with a specified number of places and transitions.
--   **Reachability Analysis**: Compute the reachability graph to determine all possible states of an SPN.
--   **Property Filtering**: Automatically filter SPNs based on properties like boundedness and connectivity.
--   **Dataset Creation**: Systematically generate and save large datasets of valid SPNs organized into bins based on their characteristics.
+*   **`src/petrinet`**: Petri net generation, bipartite connectivity validation, random token addition, and accelerated structural pruning (`petrinet_prune_oct.cc`).
+*   **`src/generation`**: Reachability graph exploration with 64-bit marking hashing (`hash_marking_64_oct.cc`), BFS state-space exploration (`generate_reachability_graph_oct.cc`), and POSIX `fork`/`waitpid` parallel generation (`generate_parallel_dataset.m`).
+*   **`src/analysis`**: CTMC infinitesimal generator computation, steady-state probability solving (exact direct LU and sparse uniformization iterative solver), and average place markings.
+*   **`src/augmentation`**: Net structure and transition firing rate ($\lambda$) perturbation.
+*   **`src/grid`**: 2D stratified grid partitioning across place count and state-space boundaries.
+*   **`src/report`**: Aggregate dataset statistics and interactive HTML report generation.
+*   **`src/utils`**: JSON configuration and JSONL streaming serialization.
 
-## Getting Started
+---
 
-### Prerequisites
+## Containerized Development Environment (Docker / Podman)
 
-To use this toolkit, you will need to have **Octave** installed on your system. For some visualization and plotting functions, **gnuplot** is also required.
+A containerized development environment is provided via `./dev.sh` with GNU Octave 11.3.0, `mkoctfile` C/C++ compiler tools, and non-root user mapping.
 
--   **Octave**: A high-level language, primarily intended for numerical computations. You can download it from the [official GNU Octave website](https://www.gnu.org/software/octave/download.html).
--   **Gnuplot**: A command-line-driven graphing utility.
+### Using the Helper Script (`dev.sh`)
 
-### Installation on Debian/Ubuntu
-
-You can install the necessary packages using `apt`:
-
-```bash
-sudo apt-get update
-sudo apt-get install -y octave gnuplot
-```
-
-### Usage
-
-The two main entry points for this toolkit are `generate_dataset.m` for creating a full dataset and `test_suite.m` for verifying the installation.
-
-#### Running the Tests
-
-To ensure everything is set up correctly, you can run the built-in test suite. The tests will execute the core functions and perform basic checks to confirm they are working as expected.
-
-1.  Launch Octave from your terminal:
+*   **Build the dev image**:
     ```bash
-    octave
-    ```
-2.  From the Octave prompt, run the test script:
-    ```octave
-    test_suite
+    ./dev.sh build
     ```
 
-You should see output indicating that all tests have passed.
+*   **Compile C++ Oct-files**:
+    ```bash
+    ./dev.sh make
+    ```
 
-#### Generating a Dataset
+*   **Run test suites**:
+    ```bash
+    ./dev.sh test
+    ```
 
-The `generate_dataset` function allows you to create a custom dataset of SPNs based on your specified parameters.
+*   **Run the dataset generator**:
+    ```bash
+    ./dev.sh octave --eval "main"
+    # or with CLI flags:
+    ./dev.sh octave --eval "main('--config', 'config.json', '--workers', 'auto', '--samples', '100')"
+    ```
 
-**Function Signature:**
+*   **Run benchmarks**:
+    ```bash
+    ./dev.sh octave --eval "addpath('benchmarks'); run_benchmarks;"
+    ```
 
-```octave
-generate_dataset(pn_range, tn_range, states_bins, spns_per_bin, output_dir)
-```
+*   **Open interactive container shell**:
+    ```bash
+    ./dev.sh shell
+    ```
 
--   `pn_range`: A `[min, max]` vector for the number of places.
--   `tn_range`: A `[min, max]` vector for the number of transitions.
--   `states_bins`: A vector defining the boundaries for state bins (e.g., `[20, 100]`).
--   `spns_per_bin`: The number of valid SPNs to generate for each bin.
--   `output_dir`: The directory where the dataset will be saved.
+---
 
-**Example:**
+## CLI Options (`main.m`)
 
-To generate a small dataset with 5 SPNs per bin, for nets with 5-10 places and 4-8 transitions, binned by `<20`, `20-99`, and `>=100` states, you would run the following in Octave:
+The main CLI generator supports the following flags:
+*   `--config <path>`: Path to JSON configuration file (default: `config.json`).
+*   `--mode <mode>`: Generation mode: `'random'` or `'grid'`.
+*   `--samples <N>`: Number of samples to generate.
+*   `--output <path>`: Output JSONL destination path.
+*   `--workers, -j <N>`: Parallel workers (`'auto'` or integer, default: `'auto'`).
+*   `--seed <N>`: RNG seed for reproducible generation.
+*   `--exact` / `--no-exact`: Ensure exact target sample count via retries (default: `--exact`).
 
-```octave
-generate_dataset([5, 10], [4, 8], [20, 100], 5, 'my_spn_dataset');
-```
+---
 
-This will create a directory named `my_spn_dataset` containing the generated SPN files in HDF5 format and a `metadata.csv` file with a summary of the dataset.
+## Legacy Scripts (Standalone)
 
-## Project Structure
-
--   **`.m` files (root)**: These are the main, user-facing functions.
--   **`private/`**: Contains helper functions that are used internally by the main scripts. These are not intended to be called directly.
--   **`test_dataset/`**: A sample directory structure for where a generated dataset might be stored.
--   **`AGENTS.md`**: Provides instructions and context for AI agents working with this codebase.
+For backward compatibility with initial iterations, standalone scripts are preserved at the repository root:
+- `generate_dataset.m`: Legacy dataset generator producing HDF5 `.h5` files.
+- `spn_generate_random.m`: Single SPN generation.
+- `filter_spn.m`: Property filtering.
+- `get_reachability_graph.m`: Basic reachability graph computation.
+- `test_suite.m`: Legacy test suite.

@@ -1,5 +1,18 @@
-# Octave workspace
+# Octave
+.octave_hist
 octave-workspace
+
+# Compiled C/C++ Oct-files
+*.oct
+*.o
+*.so
+
+# Output datasets and temporary files
+*.jsonl
+*.html
+/data/
+/output/
+/temp_grid/
 
 # Generated benchmark files and directories
 benchmark_results/
@@ -10,3 +23,9 @@ benchmark_spns/
 *.png
 *.csv
 *.log
+
+# Editor / IDE
+.vscode/
+.idea/
+*.swp
+*~

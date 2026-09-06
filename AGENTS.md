@@ -4,71 +4,62 @@ This document provides instructions for AI agents working with this repository.
 
 ## Project Overview
 
-This repository contains an Octave implementation of an algorithm for generating datasets of Stochastic Petri Nets (SPNs). The primary goal is to create a benchmark dataset for learning algorithms. The code is structured as a series of Octave functions that handle the generation, filtering, and analysis of SPNs.
+This repository contains an Octave implementation of an algorithm for generating benchmark datasets of Stochastic Petri Nets (SPNs), maintaining full architectural parity with `SPN-Algo-Go`. It features C++ `oct` extensions for high performance, POSIX `fork`/`waitpid` parallel generation, and CTMC analysis.
 
-### Key Scripts
+### Modern Project Structure
 
-- **`generate_dataset.m`**: The main script for generating a complete dataset. It orchestrates the entire process, from random SPN creation to filtering and saving the results.
-- **`spn_generate_random.m`**: Generates a single random SPN with a specified number of places and transitions.
-- **`filter_spn.m`**: Analyzes an SPN to determine if it meets certain criteria (e.g., boundedness, connectivity) and is suitable for inclusion in the dataset.
-- **`get_reachability_graph.m`**: A core analysis function that computes the reachability graph for a given SPN. This is crucial for checking properties like boundedness.
-- **`test_suite.m`**: A test script that runs a series of checks to ensure the core functionalities of the repository are working correctly.
+- **`main.m`**: Command-line entry point supporting arguments (`--config`, `--mode`, `--samples`, `--workers`, `--seed`, `--output`, `--exact`).
+- **`config.json`**: Default dataset generation configuration.
+- **`src/`**: Modular core libraries:
+  - `petrinet/`: Net representation, bipartite connectivity BFS, token assignment, and C++ accelerated pruning (`petrinet_prune_oct.cc`).
+  - `generation/`: BFS reachability graph generator with C++ oct acceleration (`generate_reachability_graph_oct.cc`), 64-bit marking hash (`hash_marking_64_oct.cc`), and parallel multiprocessing generation (`generate_parallel_dataset.m`).
+  - `analysis/`: Infinitesimal CTMC generator matrix, steady-state solving (direct LU and sparse uniformization iterative power iteration), and place marking densities.
+  - `augmentation/`: Net structure and transition firing rate variations.
+  - `grid/`: 2D stratified partitioning across place and state-space boundaries.
+  - `report/`: Dataset summary statistics and HTML visual report generation.
+  - `utils/`: JSON configuration and JSONL streaming serializers.
+- **`tests/`**: Modular test suites executed via `tests/run_tests.m` or `./dev.sh test`.
+- **`benchmarks/`**: Microbenchmarks and 1000-net scaling benchmarks matching `SPN-Algo-Go`.
+- **`Makefile`**: Builds C++ `.oct` files via `mkoctfile`.
+- **`dev.sh`**: Helper script managing Docker/Podman containers and test/build workflows.
 
-### `private/` Directory
+### Legacy Scripts (Preserved for compatibility)
 
-The `private/` directory contains helper functions used by the main scripts. These are not meant to be called directly by the user but are essential for the internal workings of the tools.
+- `generate_dataset.m`, `spn_generate_random.m`, `filter_spn.m`, `get_reachability_graph.m`, `test_suite.m`, `private/`.
 
 ## Environment Setup
 
-This project requires **Octave** and the **gnuplot** package for plotting.
-
-To set up the environment, run the following commands:
+A containerized environment is provided via `./dev.sh` (supporting Docker and Podman):
 
 ```bash
-sudo apt-get update
-sudo apt-get install -y octave gnuplot
+./dev.sh build   # Build dev container image
+./dev.sh make    # Compile C++ oct-files via mkoctfile
+./dev.sh test    # Run full test suite
 ```
 
-## Performance Benchmarks
-
-To ensure future optimizations are measurable, a benchmark suite is available to profile CPU time and peak memory (Maximum Resident Set Size).
-
-### Running the Benchmark Suite
-The benchmark suite scripts profile three key areas of the application:
-1. **Generation:** Runs `bench_generation.m`
-2. **Filtering:** Runs `bench_filtering.m`
-3. **Solving:** Runs `bench_solving.m`
-
-You can run the suite via the shell script:
+Alternatively, on Debian/Ubuntu with native Octave:
 ```bash
-./run_benchmark_suite.sh
+sudo apt-get update && sudo apt-get install -y octave liboctave-dev gnuplot
+make
 ```
 
-### Initial Baselines
-These baselines serve as a starting point for measuring the impact of subsequent optimizations.
+## Running Tests
 
-- **Generation Phase** (100 SPNs):
-  - Peak Memory (Max RSS): ~75.68 MB
-  - Wall Clock Time: ~0:00.84
+To run the full modern test suite:
+```bash
+./dev.sh test
+# or inside Octave:
+tests/run_tests
+```
 
-- **Filtering Phase** (50 SPNs):
-  - Peak Memory (Max RSS): ~79.20 MB
-  - Wall Clock Time: ~0:37.50
-
-- **Solving Phase** (100 states target, using `bicg`):
-  - Peak Memory (Max RSS): ~204.32 MB
-  - Wall Clock Time: ~0:02.66
+To run the legacy test suite:
+```bash
+./dev.sh octave --eval "test_suite"
+```
 
 ## Agent Workflow
 
-1.  **Understand the Goal**: The primary purpose of this codebase is to generate SPN datasets. Most tasks will revolve around modifying the generation algorithm, improving performance, or adding new analysis features.
-2.  **Consult the Documentation**: All functions, both public and private, should have comprehensive docstrings explaining their purpose, parameters, and return values. Refer to these docstrings to understand the functionality of each script.
-3.  **Run Tests**: Before making changes, run the test suite to ensure the current implementation is working as expected. After making changes, run the tests again to check for regressions.
-
-    To run the tests, start Octave and run the `test_suite` script:
-
-    ```octave
-    test_suite
-    ```
-
-4.  **Follow Octave Conventions**: Adhere to the standard coding style and documentation conventions for Octave. Ensure that any new code is clearly commented and documented.
+1. **Maintain Architecture & Parity**: Preserve consistency with `SPN-Algo-Go` data structures and algorithmic behavior.
+2. **Build and Test**: Always verify changes by running `./dev.sh make` and `./dev.sh test`.
+3. **Preserve Documentation**: Ensure all Octave functions and C++ source files have clear docstrings and comments.
+4. **Follow Octave/C++ Conventions**: Adhere to idiomatic GNU Octave code style and safe vectorization practices.
