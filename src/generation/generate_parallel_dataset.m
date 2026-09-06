@@ -95,18 +95,7 @@ function [total_written, stats] = generate_parallel_dataset(config, num_workers,
       printf("Completed! Wrote %d samples (in %d attempts) to %s\n", total_written, attempts, output_file);
     endif
 
-    if isfield(config, "enable_statistics_report") && config.enable_statistics_report
-      stats = calculate_stats(results);
-      report_path = [output_file, ".html"];
-      generate_html_report(report_path, stats);
-      if !quiet
-        printf("Generated HTML statistics report: %s\n", report_path);
-        printf("Stats: %d samples, avg places=%.2f, avg trans=%.2f, avg markings=%.2f\n", ...
-               stats.num_samples, stats.avg_places, stats.avg_transitions, stats.avg_markings);
-      endif
-    else
-      stats = struct();
-    endif
+    stats = finalize_dataset(config, output_file, total_written, results, quiet);
     return;
   endif
 
@@ -229,9 +218,17 @@ function [total_written, stats] = generate_parallel_dataset(config, num_workers,
     printf("Parallel generation completed! Wrote %d samples to %s\n", total_written, output_file);
   endif
 
-  % Optional HTML report and stats calculation
+  stats = finalize_dataset(config, output_file, total_written, {}, quiet);
+endfunction
+
+function stats = finalize_dataset(config, output_file, total_written, results, quiet)
+  % 1. Optional HTML report and stats calculation
   if isfield(config, "enable_statistics_report") && config.enable_statistics_report
-    stats = compute_streaming_stats_jsonl(output_file);
+    if !isempty(results)
+      stats = calculate_stats(results);
+    else
+      stats = compute_streaming_stats_jsonl(output_file);
+    endif
     report_path = [output_file, ".html"];
     generate_html_report(report_path, stats);
     if !quiet
@@ -241,6 +238,48 @@ function [total_written, stats] = generate_parallel_dataset(config, num_workers,
     endif
   else
     stats = struct();
+  endif
+
+  % 2. HDF5 export if requested
+  fmt = "jsonl";
+  if isfield(config, "format") && !isempty(config.format)
+    fmt = config.format;
+  endif
+
+  if strcmp(fmt, "hdf5") || strcmp(fmt, "both")
+    if regexpi(output_file, '\.h5$')
+      h5_file = output_file;
+    else
+      h5_file = regexprep(output_file, '\.jsonl$', '.h5');
+      if strcmp(h5_file, output_file)
+        h5_file = [output_file, ".h5"];
+      endif
+    endif
+
+    layout = "flat";
+    if isfield(config, "hdf5_layout") && !isempty(config.hdf5_layout)
+      layout = config.hdf5_layout;
+    endif
+
+    comp_lvl = 4;
+    if isfield(config, "hdf5_compression_level") && !isempty(config.hdf5_compression_level)
+      comp_lvl = config.hdf5_compression_level;
+    endif
+
+    % Export to HDF5
+    if !isempty(results) && length(results) == total_written
+      export_dataset_hdf5(results, h5_file, layout, comp_lvl);
+    else
+      export_dataset_hdf5(output_file, h5_file, layout, comp_lvl);
+    endif
+
+    if !quiet
+      printf("Exported HDF5 dataset (%s layout, compression %d) to: %s\n", layout, comp_lvl, h5_file);
+    endif
+
+    if strcmp(fmt, "hdf5") && !strcmp(output_file, h5_file) && exist(output_file, "file")
+      delete(output_file);
+    endif
   endif
 endfunction
 

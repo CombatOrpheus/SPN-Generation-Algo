@@ -43,6 +43,9 @@ function main(varargin)
   cli_seed = [];
   cli_exact = [];
   cli_workers = "";
+  cli_format = "";
+  cli_layout = "";
+  cli_compression = [];
 
   % Parse CLI args
   i = 1;
@@ -62,6 +65,15 @@ function main(varargin)
       i = i + 2;
     elseif strcmp(arg, "--output") && i < length(varargin)
       cli_output = varargin{i + 1};
+      i = i + 2;
+    elseif strcmp(arg, "--format") && i < length(varargin)
+      cli_format = varargin{i + 1};
+      i = i + 2;
+    elseif strcmp(arg, "--hdf5-layout") && i < length(varargin)
+      cli_layout = varargin{i + 1};
+      i = i + 2;
+    elseif (strcmp(arg, "--compression") || strcmp(arg, "-z")) && i < length(varargin)
+      cli_compression = str2double(varargin{i + 1});
       i = i + 2;
     elseif strcmp(arg, "--seed") && i < length(varargin)
       cli_seed = str2double(varargin{i + 1});
@@ -114,6 +126,15 @@ function main(varargin)
   elseif !isfield(config, "num_workers")
     config.num_workers = "auto";
   endif
+  if !isempty(cli_format)
+    config.format = cli_format;
+  endif
+  if !isempty(cli_layout)
+    config.hdf5_layout = cli_layout;
+  endif
+  if !isempty(cli_compression) && !isnan(cli_compression)
+    config.hdf5_compression_level = cli_compression;
+  endif
 
   % Validate configuration parameters before execution
   validate_config(config);
@@ -135,15 +156,18 @@ endfunction
 function print_usage()
   printf("Usage: octave main.m [OPTIONS]\n\n");
   printf("Options:\n");
-  printf("  --config <path>    Path to JSON configuration file (default: config.json)\n");
-  printf("  --mode <mode>      Generation mode: 'random' or 'grid'\n");
-  printf("  --samples <N>      Number of samples to generate\n");
-  printf("  --output <path>    Output file destination path\n");
-  printf("  --workers, -j <N>  Number of parallel workers ('auto' or integer, default: auto)\n");
-  printf("  --seed <N>         Random number generator seed for reproducibility\n");
-  printf("  --exact            Ensure exact target sample count via retries (default)\n");
-  printf("  --no-exact         Do not retry invalid nets (fixed attempt count)\n");
-  printf("  --help, -h         Show this help message\n");
+  printf("  --config <path>         Path to JSON configuration file (default: config.json)\n");
+  printf("  --mode <mode>           Generation mode: 'random' or 'grid'\n");
+  printf("  --samples <N>           Number of samples to generate\n");
+  printf("  --output <path>         Output file destination path\n");
+  printf("  --format <fmt>          Output format: 'jsonl', 'hdf5', or 'both'\n");
+  printf("  --hdf5-layout <layout>  HDF5 layout: 'flat' (CSR pointers) or 'groups' (hierarchical)\n");
+  printf("  --compression, -z <N>   Deflate compression level (0-9, default: 4)\n");
+  printf("  --workers, -j <N>       Number of parallel workers ('auto' or integer, default: auto)\n");
+  printf("  --seed <N>              Random number generator seed for reproducibility\n");
+  printf("  --exact                 Ensure exact target sample count via retries (default)\n");
+  printf("  --no-exact              Do not retry invalid nets (fixed attempt count)\n");
+  printf("  --help, -h              Show this help message\n");
 endfunction
 
 function run_random_generation(config)

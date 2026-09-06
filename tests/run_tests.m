@@ -24,6 +24,7 @@ function run_tests()
     {"test_grid", @test_grid},
     {"test_report", @test_report},
     {"test_utils", @test_utils},
+    {"test_hdf5", @test_hdf5},
     {"test_main", @test_main},
     {"test_parallel", @test_parallel}
   };

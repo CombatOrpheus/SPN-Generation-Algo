@@ -78,4 +78,26 @@ function validate_config(config)
       error("validate_config: 'samples_per_grid' must be an integer >= 1.");
     endif
   endif
+
+  % 7. Export format & HDF5 validation
+  if isfield(config, "format")
+    if !ischar(config.format) || ...
+       (!strcmp(config.format, "jsonl") && !strcmp(config.format, "hdf5") && !strcmp(config.format, "both"))
+      error("validate_config: 'format' must be 'jsonl', 'hdf5', or 'both'.");
+    endif
+  endif
+
+  if isfield(config, "hdf5_layout")
+    if !ischar(config.hdf5_layout) || ...
+       (!strcmp(config.hdf5_layout, "flat") && !strcmp(config.hdf5_layout, "groups"))
+      error("validate_config: 'hdf5_layout' must be either 'flat' or 'groups'.");
+    endif
+  endif
+
+  if isfield(config, "hdf5_compression_level")
+    lvl = config.hdf5_compression_level;
+    if !isnumeric(lvl) || lvl < 0 || lvl > 9 || floor(lvl) != lvl
+      error("validate_config: 'hdf5_compression_level' must be an integer between 0 and 9.");
+    endif
+  endif
 endfunction
