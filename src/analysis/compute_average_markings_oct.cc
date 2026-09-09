@@ -27,11 +27,13 @@ DEFUN_DLD(compute_average_markings_oct, args, nargout,
     std::vector<int> max_tokens(P, 0);
 
     // Pass 1: Compute expected value E[M(p)] and determine max observed tokens per place
-    // Column-major sequential scanning along columns
+    // Column-major sequential scanning along columns with SIMD reduction
     for (int p = 0; p < P; ++p) {
         const octave_int32* col = raw_vertices + p * V;
         double sum_tok = 0.0;
         int max_t = 0;
+
+        #pragma omp simd reduction(+:sum_tok) reduction(max:max_t)
         for (int v = 0; v < V; ++v) {
             int tok = col[v].value();
             sum_tok += static_cast<double>(tok) * raw_probs[v];
