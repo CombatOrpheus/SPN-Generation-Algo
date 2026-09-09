@@ -59,10 +59,10 @@ function run_benchmarks()
   run_bench("Improvement_Solver_DirectLU", @() solve_steady_state(sm_med, tv_med), 5, 1.0);
   run_bench("Improvement_Solver_Iterative", @() solve_steady_state_iterative(rg_ana_med, lambdas_med), 5, 1.0);
 
-  % II. Average Markings: repmat vs repelem
+  % II. Average Markings: 2D accumarray vs Column-wise Sparse Accumulation
   probs_med = solve_steady_state_iterative(rg_ana_med, lambdas_med);
-  run_bench("Improvement_AvgMarkings_Repmat", @() bench_avg_markings_repmat(rg_ana_med, probs_med), 10, 1.0);
-  run_bench("Improvement_AvgMarkings_Repelem", @() compute_average_markings(rg_ana_med, probs_med), 10, 1.0);
+  run_bench("Improvement_AvgMarkings_2DRepmat", @() bench_avg_markings_repmat(rg_ana_med, probs_med), 10, 1.0);
+  run_bench("Improvement_AvgMarkings_SparseCol", @() compute_average_markings(rg_ana_med, probs_med), 10, 1.0);
 
   % III. Connectivity: Degree-only vs Bipartite BFS
   pn_dense = petrinet_new(20, 20);

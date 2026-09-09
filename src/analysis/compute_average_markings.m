@@ -41,14 +41,13 @@ function [avg_markings, marking_densities] = compute_average_markings(rg, steady
   % Vectorized computation of average tokens per place
   avg_markings = (probs' * double(rg.vertices))';
 
-  % Fast computation of token probability densities using 2D accumarray
+  % Fast computation of token probability densities using column-wise sparse accumulation
   max_p = max(rg.vertices, [], 1);
-  max_tok = max(max_p) + 1;
-  D = accumarray([rg.vertices(:) + 1, repelem(1:P, V)'], repmat(probs, P, 1), [max_tok, P]);
-
   marking_densities = cell(P, 1);
   for p = 1:P
-    marking_densities{p} = D(1:(max_p(p) + 1), p)';
+    mp = double(max_p(p)) + 1;
+    d = full(sparse(double(rg.vertices(:, p)) + 1, 1, probs, mp, 1));
+    marking_densities{p} = d';
   endfor
 endfunction
 

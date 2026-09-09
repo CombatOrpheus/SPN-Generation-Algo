@@ -89,41 +89,42 @@ function [probs, err] = solve_steady_state_iterative(rg, lambda_values, max_iter
 
   gamma = 1.01 * max_q;
 
-  % Form sparse uniformized discrete-time transition probability matrix P
-  % Off-diagonal: P(i, j) = q_ij / gamma
-  % Diagonal: P(i, i) = 1 - q_i / gamma
+  % Form transposed sparse uniformized matrix PT directly in column-major CSC format.
+  % Transition from src to dest: P(src, dest) = rates / gamma -> PT(dest, src) = rates / gamma
+  % Operating as pi^(k+1) = PT * pi^k on column vectors avoids transpositions and improves cache locality.
   diag_vals = 1.0 - (q / gamma);
 
-  rows = [src_ns; (1:V)'];
-  cols = [dest_ns; (1:V)'];
-  vals = [rates_ns / gamma; diag_vals];
+  rows_t = [dest_ns; (1:V)'];
+  cols_t = [src_ns; (1:V)'];
+  vals_t = [rates_ns / gamma; diag_vals];
 
-  P_trans = sparse(rows, cols, vals, V, V);
+  PT = sparse(rows_t, cols_t, vals_t, V, V);
 
-  % Uniform initialization: row vector
-  pi_vec = ones(1, V) / V;
+  % Uniform initialization: column vector
+  pi_col = ones(V, 1) / V;
   err = true;
 
-  % Power iteration: pi^(k+1) = pi^k * P
-  for iter = 1:max_iter
-    pi_next = pi_vec * P_trans;
+  % Batched power iteration with periodic L1 convergence checking and normalization
+  batch_size = 15;
+  for iter = 1:batch_size:max_iter
+    pi_prev = pi_col;
+    num_steps = min(batch_size, max_iter - iter + 1);
+    for b = 1:num_steps
+      pi_col = PT * pi_col;
+    endfor
 
-    % Normalize to prevent numerical drift
-    s = sum(pi_next);
+    s = sum(pi_col);
     if s > 0
-      pi_next = pi_next / s;
+      pi_col = pi_col / s;
     endif
 
-    diff = sum(abs(pi_next - pi_vec));
-    pi_vec = pi_next;
-
-    if diff < tol
+    if sum(abs(pi_col - pi_prev)) < tol
       err = false;
       break;
     endif
   endfor
 
-  probs = pi_vec(:);
+  probs = pi_col;
   probs(probs < 0) = 0.0;
   prob_sum = sum(probs);
   if prob_sum > 1e-9
