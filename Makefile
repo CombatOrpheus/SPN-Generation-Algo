@@ -7,7 +7,9 @@ OCTS = $(OUT_DIR)/generate_reachability_graph_oct.oct \
        $(OUT_DIR)/hash_marking_64_oct.oct \
        $(OUT_DIR)/petrinet_prune_oct.oct \
        $(OUT_DIR)/export_dataset_hdf5_oct.oct \
-       $(OUT_DIR)/import_dataset_hdf5_oct.oct
+       $(OUT_DIR)/import_dataset_hdf5_oct.oct \
+       $(OUT_DIR)/solve_steady_state_oct.oct \
+       $(OUT_DIR)/compute_average_markings_oct.oct
 
 all: $(OUT_DIR) $(OCTS)
 
@@ -28,6 +30,12 @@ $(OUT_DIR)/export_dataset_hdf5_oct.oct: src/utils/export_dataset_hdf5_oct.cc | $
 
 $(OUT_DIR)/import_dataset_hdf5_oct.oct: src/utils/import_dataset_hdf5_oct.cc | $(OUT_DIR)
 	mkoctfile -O3 $(HDF5_CFLAGS) $(HDF5_LDFLAGS) $< -o $@
+
+$(OUT_DIR)/solve_steady_state_oct.oct: src/analysis/solve_steady_state_oct.cc | $(OUT_DIR)
+	mkoctfile -O3 $< -o $@
+
+$(OUT_DIR)/compute_average_markings_oct.oct: src/analysis/compute_average_markings_oct.cc | $(OUT_DIR)
+	mkoctfile -O3 $< -o $@
 
 clean:
 	rm -rf build/

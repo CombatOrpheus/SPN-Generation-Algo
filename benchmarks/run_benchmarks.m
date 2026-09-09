@@ -54,15 +54,16 @@ function run_benchmarks()
   printf("  Dedicated Individual Improvement Microbenchmarks\n");
   printf("-------------------------------------------------------------------\n\n");
 
-  % I. Solver: Direct LU vs Sparse Uniformization (Power Iteration)
+  % I. Solver: Direct LU vs Pure Octave Iterative vs C++ Oct-file
   [sm_med, tv_med] = compute_state_equation(rg_ana_med, lambdas_med);
   run_bench("Improvement_Solver_DirectLU", @() solve_steady_state(sm_med, tv_med), 5, 1.0);
-  run_bench("Improvement_Solver_Iterative", @() solve_steady_state_iterative(rg_ana_med, lambdas_med), 5, 1.0);
+  run_bench("Improvement_Solver_PureOctave", @() solve_steady_state_iterative(rg_ana_med, lambdas_med, 50000, 1e-10, true), 5, 1.0);
+  run_bench("Improvement_Solver_CPPOct", @() solve_steady_state_iterative(rg_ana_med, lambdas_med, 50000, 1e-10, false), 5, 1.0);
 
-  % II. Average Markings: 2D accumarray vs Column-wise Sparse Accumulation
+  % II. Average Markings: Pure Octave vs C++ Oct-file
   probs_med = solve_steady_state_iterative(rg_ana_med, lambdas_med);
-  run_bench("Improvement_AvgMarkings_2DRepmat", @() bench_avg_markings_repmat(rg_ana_med, probs_med), 10, 1.0);
-  run_bench("Improvement_AvgMarkings_SparseCol", @() compute_average_markings(rg_ana_med, probs_med), 10, 1.0);
+  run_bench("Improvement_AvgMarkings_PureOctave", @() compute_average_markings(rg_ana_med, probs_med, true), 10, 1.0);
+  run_bench("Improvement_AvgMarkings_CPPOct", @() compute_average_markings(rg_ana_med, probs_med, false), 10, 1.0);
 
   % III. Connectivity: Degree-only vs Bipartite BFS
   pn_dense = petrinet_new(20, 20);

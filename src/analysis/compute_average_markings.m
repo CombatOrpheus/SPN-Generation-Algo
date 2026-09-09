@@ -1,10 +1,12 @@
 ## -*- texinfo -*-
 ## @deftypefn {} {[@var{avg_markings}, @var{marking_densities}] =} compute_average_markings (@var{rg}, @var{steady_state_probs})
+## @deftypefnx {} {[@var{avg_markings}, @var{marking_densities}] =} compute_average_markings (@var{rg}, @var{steady_state_probs}, @var{force_pure_octave})
 ## Compute average token counts and probability distributions per place.
 ##
 ## Computes expected token occupancy and discrete probability density distributions
 ## for each place in the Petri net given the steady-state probability distribution
-## of the continuous-time Markov chain.
+## of the continuous-time Markov chain. Uses high-performance C++ extension
+## (@file{compute_average_markings_oct}) when compiled, with an optimized pure Octave fallback.
 ##
 ## @table @asis
 ## @item @var{rg}
@@ -12,6 +14,9 @@
 ##
 ## @item @var{steady_state_probs}
 ## Column vector of length @math{V} with steady-state state probabilities.
+##
+## @item @var{force_pure_octave}
+## Optional boolean flag (default: false). When true, bypasses compiled oct-file.
 ## @end table
 ##
 ## Outputs:
@@ -26,7 +31,11 @@
 ##
 ## @seealso{solve_steady_state, generate_reachability_graph}
 ## @end deftypefn
-function [avg_markings, marking_densities] = compute_average_markings(rg, steady_state_probs)
+function [avg_markings, marking_densities] = compute_average_markings(rg, steady_state_probs, force_pure_octave)
+
+  if nargin < 3
+    force_pure_octave = false;
+  endif
 
   if rg.num_vertices == 0
     avg_markings = [];
@@ -34,9 +43,14 @@ function [avg_markings, marking_densities] = compute_average_markings(rg, steady
     return;
   endif
 
-  V = rg.num_vertices;
-  P = size(rg.vertices, 2);
-  probs = steady_state_probs(:);
+  V = int32(rg.num_vertices);
+  P = int32(size(rg.vertices, 2));
+  probs = double(steady_state_probs(:));
+
+  if !force_pure_octave && exist("compute_average_markings_oct", "file") == 3
+    [avg_markings, marking_densities] = compute_average_markings_oct(int32(rg.vertices), probs, P);
+    return;
+  endif
 
   % Vectorized computation of average tokens per place
   avg_markings = (probs' * double(rg.vertices))';

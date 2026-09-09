@@ -1,12 +1,13 @@
 ## -*- texinfo -*-
 ## @deftypefn {} {[@var{probs}, @var{err}] =} solve_steady_state_iterative (@var{rg}, @var{lambda_values})
 ## @deftypefnx {} {[@var{probs}, @var{err}] =} solve_steady_state_iterative (@var{rg}, @var{lambda_values}, @var{max_iter}, @var{tol})
+## @deftypefnx {} {[@var{probs}, @var{err}] =} solve_steady_state_iterative (@var{rg}, @var{lambda_values}, @var{max_iter}, @var{tol}, @var{force_pure_octave})
 ## Solve for steady-state distribution using sparse uniformization power iteration.
 ##
 ## Computes the stationary probability vector @math{\pi} of the Continuous-Time
 ## Markov Chain (CTMC) through uniformization into a discrete-time Markov chain.
-## Operates in @math{O(V)} memory and @math{O(|E|)} work per iteration, avoiding dense
-## matrix allocations.
+## Uses high-performance C++ extension (@file{solve_steady_state_oct}) when compiled,
+## with an optimized pure Octave fallback.
 ##
 ## @table @asis
 ## @item @var{rg}
@@ -20,6 +21,9 @@
 ##
 ## @item @var{tol}
 ## Optional @math{L_1} convergence tolerance (default: 1e-10).
+##
+## @item @var{force_pure_octave}
+## Optional boolean flag (default: false). When true, bypasses compiled oct-file.
 ## @end table
 ##
 ## Outputs:
@@ -33,7 +37,7 @@
 ##
 ## @seealso{solve_steady_state, compute_state_equation}
 ## @end deftypefn
-function [probs, err] = solve_steady_state_iterative(rg, lambda_values, max_iter, tol)
+function [probs, err] = solve_steady_state_iterative(rg, lambda_values, max_iter, tol, force_pure_octave)
 
   if nargin < 3 || isempty(max_iter)
     max_iter = 50000;
@@ -41,8 +45,11 @@ function [probs, err] = solve_steady_state_iterative(rg, lambda_values, max_iter
   if nargin < 4 || isempty(tol)
     tol = 1e-10;
   endif
+  if nargin < 5 || isempty(force_pure_octave)
+    force_pure_octave = false;
+  endif
 
-  V = rg.num_vertices;
+  V = int32(rg.num_vertices);
   if V == 0
     probs = [];
     err = false;
@@ -55,8 +62,13 @@ function [probs, err] = solve_steady_state_iterative(rg, lambda_values, max_iter
   endif
 
   if rg.num_edges == 0
-    probs = ones(V, 1) / V;
+    probs = ones(V, 1) / double(V);
     err = false;
+    return;
+  endif
+
+  if !force_pure_octave && exist("solve_steady_state_oct", "file") == 3
+    [probs, err] = solve_steady_state_oct(int32(rg.edges), int32(rg.arc_transitions), double(lambda_values), V, int32(max_iter), double(tol));
     return;
   endif
 
@@ -101,7 +113,7 @@ function [probs, err] = solve_steady_state_iterative(rg, lambda_values, max_iter
   PT = sparse(rows_t, cols_t, vals_t, V, V);
 
   % Uniform initialization: column vector
-  pi_col = ones(V, 1) / V;
+  pi_col = ones(V, 1) / double(V);
   err = true;
 
   % Batched power iteration with periodic L1 convergence checking and normalization

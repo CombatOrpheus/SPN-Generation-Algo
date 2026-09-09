@@ -35,17 +35,19 @@ function test_analysis()
   expected_probs = [0.0; 1.0];
   assert(max(abs(probs - expected_probs)) < 1e-9, "Steady state probs mismatch");
 
-  % 3. Test compute_average_markings
+  % 3. Test compute_average_markings (C++ .oct and pure Octave fallback)
   [avg_markings, densities] = compute_average_markings(rg, probs);
+  [avg_markings_oct, densities_oct] = compute_average_markings(rg, probs, true);
 
   expected_avg_markings = [0.0; 1.0];
   assert(max(abs(avg_markings - expected_avg_markings)) < 1e-9, "Average markings mismatch");
+  assert(max(abs(avg_markings_oct - expected_avg_markings)) < 1e-9, "Pure Octave average markings mismatch");
 
   assert(length(densities) == 2, "Expected 2 place densities");
-  % Place 1: 100% prob of 0 tokens, 0% of 1 token
   assert(max(abs(densities{1} - [1.0, 0.0])) < 1e-9, "Place 1 densities mismatch");
-  % Place 2: 0% prob of 0 tokens, 100% of 1 token
   assert(max(abs(densities{2} - [0.0, 1.0])) < 1e-9, "Place 2 densities mismatch");
+  assert(max(abs(densities_oct{1} - [1.0, 0.0])) < 1e-9, "Pure Octave place 1 densities mismatch");
+  assert(max(abs(densities_oct{2} - [0.0, 1.0])) < 1e-9, "Pure Octave place 2 densities mismatch");
 
   % 4. Test solve_steady_state_iterative and polymorphic solve_steady_state(rg, lambdas)
   rg_cycle = struct();
@@ -62,6 +64,10 @@ function test_analysis()
   [iter_probs, iter_err] = solve_steady_state_iterative(rg_cycle, cycle_lambdas);
   assert(!iter_err, "Iterative steady state solver should converge on cyclic CTMC");
   assert(max(abs(iter_probs - [0.6; 0.4])) < 1e-6, "Iterative steady state probabilities mismatch");
+
+  [iter_probs_oct, iter_err_oct] = solve_steady_state_iterative(rg_cycle, cycle_lambdas, 50000, 1e-10, true);
+  assert(!iter_err_oct, "Pure Octave iterative solver should converge on cyclic CTMC");
+  assert(max(abs(iter_probs_oct - [0.6; 0.4])) < 1e-6, "Pure Octave iterative probabilities mismatch");
 
   % Test solve_steady_state polymorphic dispatch
   [poly_probs, poly_err] = solve_steady_state(rg_cycle, cycle_lambdas);
@@ -85,6 +91,10 @@ function test_analysis()
   [probs3_iter, err3_iter] = solve_steady_state_iterative(rg_cycle3, lambdas3);
   assert(!err3_iter, "Iterative solver failed on 3-state cycle");
   assert(max(abs(probs3_iter - expected_pi3)) < 1e-6, "3-state iterative stationary distribution mismatch");
+
+  [probs3_iter_oct, err3_iter_oct] = solve_steady_state_iterative(rg_cycle3, lambdas3, 50000, 1e-10, true);
+  assert(!err3_iter_oct, "Pure Octave iterative solver failed on 3-state cycle");
+  assert(max(abs(probs3_iter_oct - expected_pi3)) < 1e-6, "3-state pure Octave iterative distribution mismatch");
 
   [probs3_direct, err3_direct] = solve_steady_state(rg_cycle3, lambdas3);
   assert(!err3_direct, "Direct solver failed on 3-state cycle");
