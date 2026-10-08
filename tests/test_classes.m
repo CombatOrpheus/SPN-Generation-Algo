@@ -103,20 +103,20 @@ function test_classes()
 
   % Verify analytical solution for 2-state CTMC:
   % pi(1) * lambda(1) = pi(2) * lambda(2) => pi(1)*1 = pi(2)*2 => pi(1) = 2/3, pi(2) = 1/3
-  assert(abs(pi(1) - 2/3) < 1e-4, "pi(1) mismatch with analytical solution");
-  assert(abs(pi(2) - 1/3) < 1e-4, "pi(2) mismatch with analytical solution");
+  assert_approx_equal(pi(1), 2/3, 1e-4, "pi(1) mismatch with analytical solution");
+  assert_approx_equal(pi(2), 1/3, 1e-4, "pi(2) mismatch with analytical solution");
 
   % Test compute_average_markings()
   [avg_m, densities] = rg.compute_average_markings(pi);
   assert(length(avg_m) == 2, "Average markings must have length P");
-  assert(abs(avg_m(1) - 2/3) < 1e-4, "Average marking P1 mismatch");
-  assert(abs(avg_m(2) - 1/3) < 1e-4, "Average marking P2 mismatch");
+  assert_approx_equal(avg_m(1), 2/3, 1e-4, "Average marking P1 mismatch");
+  assert_approx_equal(avg_m(2), 1/3, 1e-4, "Average marking P2 mismatch");
   assert(length(densities) == 2, "Densities cell array must have length P");
 
   % Test polymorphic solve_steady_state passing ReachabilityGraph directly
   [pi_poly, err_poly] = solve_steady_state(rg, lambda);
   assert(!err_poly, "Polymorphic solve_steady_state returned error");
-  assert(max(abs(pi - pi_poly)) < 1e-12, "Polymorphic solve_steady_state mismatch");
+  assert_approx_equal(pi, pi_poly, 1e-12, "Polymorphic solve_steady_state mismatch");
 
   % Test ReachabilityGraph struct conversion
   rg_struct = rg.to_struct();

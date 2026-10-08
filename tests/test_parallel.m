@@ -9,7 +9,8 @@ function test_parallel()
   endif
   mkdir(test_dir);
 
-  base_cfg = struct();
+  unwind_protect
+    base_cfg = struct();
   base_cfg.generation_mode = "random";
   base_cfg.num_places = 4;
   base_cfg.num_transitions = 2;
@@ -78,11 +79,12 @@ function test_parallel()
   [cnt_zero, ~] = generate_parallel_dataset(cfg_zero, 4, out_zero);
   assert(cnt_zero == 0, sprintf("Expected 0 samples for N=0, got %d", cnt_zero));
 
-  % Cleanup
-  if exist(test_dir, "dir")
-    confirm_recursive_rmdir(false, "local");
-    rmdir(test_dir, "s");
-  endif
+  unwind_protect_cleanup
+    if exist(test_dir, "dir")
+      confirm_recursive_rmdir(false, "local");
+      rmdir(test_dir, "s");
+    endif
+  end_unwind_protect
 
   printf("test_parallel PASSED\n");
 endfunction

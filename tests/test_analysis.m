@@ -25,29 +25,29 @@ function test_analysis()
   ];
   expected_target_vector = [0.0; 0.0; 1.0];
 
-  assert(max(abs(state_matrix(:) - expected_state_matrix(:))) < 1e-9, "State matrix mismatch");
-  assert(max(abs(target_vector(:) - expected_target_vector(:))) < 1e-9, "Target vector mismatch");
+  assert_approx_equal(state_matrix, expected_state_matrix, 1e-9, "State matrix mismatch");
+  assert_approx_equal(target_vector, expected_target_vector, 1e-9, "Target vector mismatch");
 
   % 2. Test solve_steady_state
   [probs, err] = solve_steady_state(state_matrix, target_vector);
   assert(!err, "Solving steady state should not return error");
 
   expected_probs = [0.0; 1.0];
-  assert(max(abs(probs - expected_probs)) < 1e-9, "Steady state probs mismatch");
+  assert_approx_equal(probs, expected_probs, 1e-9, "Steady state probs mismatch");
 
   % 3. Test compute_average_markings (C++ .oct and pure Octave fallback)
   [avg_markings, densities] = compute_average_markings(rg, probs);
   [avg_markings_oct, densities_oct] = compute_average_markings(rg, probs, true);
 
   expected_avg_markings = [0.0; 1.0];
-  assert(max(abs(avg_markings - expected_avg_markings)) < 1e-9, "Average markings mismatch");
-  assert(max(abs(avg_markings_oct - expected_avg_markings)) < 1e-9, "Pure Octave average markings mismatch");
+  assert_approx_equal(avg_markings, expected_avg_markings, 1e-9, "Average markings mismatch");
+  assert_approx_equal(avg_markings_oct, expected_avg_markings, 1e-9, "Pure Octave average markings mismatch");
 
   assert(length(densities) == 2, "Expected 2 place densities");
-  assert(max(abs(densities{1} - [1.0, 0.0])) < 1e-9, "Place 1 densities mismatch");
-  assert(max(abs(densities{2} - [0.0, 1.0])) < 1e-9, "Place 2 densities mismatch");
-  assert(max(abs(densities_oct{1} - [1.0, 0.0])) < 1e-9, "Pure Octave place 1 densities mismatch");
-  assert(max(abs(densities_oct{2} - [0.0, 1.0])) < 1e-9, "Pure Octave place 2 densities mismatch");
+  assert_approx_equal(densities{1}, [1.0, 0.0], 1e-9, "Place 1 densities mismatch");
+  assert_approx_equal(densities{2}, [0.0, 1.0], 1e-9, "Place 2 densities mismatch");
+  assert_approx_equal(densities_oct{1}, [1.0, 0.0], 1e-9, "Pure Octave place 1 densities mismatch");
+  assert_approx_equal(densities_oct{2}, [0.0, 1.0], 1e-9, "Pure Octave place 2 densities mismatch");
 
   % 4. Test solve_steady_state_iterative and polymorphic solve_steady_state(rg, lambdas)
   rg_cycle = struct();
@@ -63,16 +63,16 @@ function test_analysis()
   cycle_lambdas = [2.0; 3.0];
   [iter_probs, iter_err] = solve_steady_state_iterative(rg_cycle, cycle_lambdas);
   assert(!iter_err, "Iterative steady state solver should converge on cyclic CTMC");
-  assert(max(abs(iter_probs - [0.6; 0.4])) < 1e-6, "Iterative steady state probabilities mismatch");
+  assert_approx_equal(iter_probs, [0.6; 0.4], 1e-6, "Iterative steady state probabilities mismatch");
 
   [iter_probs_oct, iter_err_oct] = solve_steady_state_iterative(rg_cycle, cycle_lambdas, 50000, 1e-10, true);
   assert(!iter_err_oct, "Pure Octave iterative solver should converge on cyclic CTMC");
-  assert(max(abs(iter_probs_oct - [0.6; 0.4])) < 1e-6, "Pure Octave iterative probabilities mismatch");
+  assert_approx_equal(iter_probs_oct, [0.6; 0.4], 1e-6, "Pure Octave iterative probabilities mismatch");
 
   % Test solve_steady_state polymorphic dispatch
   [poly_probs, poly_err] = solve_steady_state(rg_cycle, cycle_lambdas);
   assert(!poly_err, "Polymorphic solve_steady_state should succeed");
-  assert(max(abs(poly_probs - [0.6; 0.4])) < 1e-6, "Polymorphic steady state probabilities mismatch");
+  assert_approx_equal(poly_probs, [0.6; 0.4], 1e-6, "Polymorphic steady state probabilities mismatch");
 
   % 5. Test 3-State Asymmetric Cyclic CTMC with exact analytical stationary distribution
   % S1 -(1)-> S2 -(2)-> S3 -(3)-> S1
@@ -90,15 +90,15 @@ function test_analysis()
 
   [probs3_iter, err3_iter] = solve_steady_state_iterative(rg_cycle3, lambdas3);
   assert(!err3_iter, "Iterative solver failed on 3-state cycle");
-  assert(max(abs(probs3_iter - expected_pi3)) < 1e-6, "3-state iterative stationary distribution mismatch");
+  assert_approx_equal(probs3_iter, expected_pi3, 1e-6, "3-state iterative stationary distribution mismatch");
 
   [probs3_iter_oct, err3_iter_oct] = solve_steady_state_iterative(rg_cycle3, lambdas3, 50000, 1e-10, true);
   assert(!err3_iter_oct, "Pure Octave iterative solver failed on 3-state cycle");
-  assert(max(abs(probs3_iter_oct - expected_pi3)) < 1e-6, "3-state pure Octave iterative distribution mismatch");
+  assert_approx_equal(probs3_iter_oct, expected_pi3, 1e-6, "3-state pure Octave iterative distribution mismatch");
 
   [probs3_direct, err3_direct] = solve_steady_state(rg_cycle3, lambdas3);
   assert(!err3_direct, "Direct solver failed on 3-state cycle");
-  assert(max(abs(probs3_direct - expected_pi3)) < 1e-6, "3-state direct stationary distribution mismatch");
+  assert_approx_equal(probs3_direct, expected_pi3, 1e-6, "3-state direct stationary distribution mismatch");
 
   % 6. Test Single-State Boundary Condition (V = 1)
   rg_single = struct();

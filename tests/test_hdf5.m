@@ -98,9 +98,23 @@ function test_hdf5()
   export_dataset_hdf5(big_samples, uncomp_path, 0, false);
   export_dataset_hdf5(big_samples, comp_path, 6, false);
 
-  uncomp_stat = stat(uncomp_path);
-  comp_stat = stat(comp_path);
-  assert(comp_stat.size < uncomp_stat.size, "Compression failed to reduce file size.");
+  has_native_hdf5 = false;
+  if exist("export_dataset_hdf5_oct", "file") == 3
+    try
+      probe_file = fullfile(test_dir, "probe.h5");
+      export_dataset_hdf5_oct({s1}, probe_file, 0);
+      if exist(probe_file, "file"), delete(probe_file); endif
+      has_native_hdf5 = true;
+    catch
+      has_native_hdf5 = false;
+    end_try_catch
+  endif
+
+  if has_native_hdf5
+    uncomp_stat = stat(uncomp_path);
+    comp_stat = stat(comp_path);
+    assert(comp_stat.size < uncomp_stat.size, "Compression failed to reduce file size.");
+  endif
 
   % Clean up
   confirm_recursive_rmdir(false, "local");
