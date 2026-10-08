@@ -1,22 +1,37 @@
 ## -*- texinfo -*-
-## @deftypefn {} {} validate_config (@var{config})
-## Validate dataset generation and analysis configuration struct.
+## @deftypefn {} {@var{out_cfg} =} validate_config (@var{config})
+## Validate dataset generation and analysis configuration struct and populate defaults.
 ##
 ## Checks configuration integrity, field presence, data types, and logical value bounds
-## before execution starts. Throws an informative error if any validation check fails.
+## before execution starts. Automatically fills missing optional fields with standard defaults.
+## Throws an informative error if any validation check fails.
 ##
 ## @table @asis
 ## @item @var{config}
 ## Struct representing configuration loaded from JSON or CLI options.
 ## @end table
 ##
-## @seealso{load_json, generate_parallel_dataset}
+## Returns normalized configuration struct @var{out_cfg}.
+##
+## @seealso{get_default_config, load_json, generate_parallel_dataset}
 ## @end deftypefn
-function validate_config(config)
+function out_cfg = validate_config(config)
 
   if !isstruct(config)
     error("validate_config: Configuration must be a struct.");
   endif
+
+  % Merge with standard defaults for any missing optional fields
+  default_cfg = get_default_config();
+  fields = fieldnames(default_cfg);
+  for k = 1:length(fields)
+    f = fields{k};
+    if !isfield(config, f) || isempty(config.(f))
+      if !strcmp(f, "seed") % Seed can intentionally be empty
+        config.(f) = default_cfg.(f);
+      endif
+    endif
+  endfor
 
   % 1. Mode
   if !isfield(config, "generation_mode") || !ischar(config.generation_mode) || ...
@@ -93,4 +108,6 @@ function validate_config(config)
       error("validate_config: 'hdf5_compression_level' must be an integer between 0 and 9.");
     endif
   endif
+
+  out_cfg = config;
 endfunction
