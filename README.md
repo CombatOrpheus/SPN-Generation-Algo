@@ -6,13 +6,16 @@ Implementation of the Stochastic Petri Net (SPN) generation, analysis, and datas
 
 The modular implementation is located in `src/` with entry point `main.m` and configuration in `config.json`:
 
-*   **`src/petrinet`**: Petri net generation, bipartite connectivity validation, random token addition, and accelerated structural pruning (`petrinet_prune_oct.cc`).
-*   **`src/generation`**: Reachability graph exploration with 64-bit marking hashing (`hash_marking_64_oct.cc`), BFS state-space exploration (`generate_reachability_graph_oct.cc`), and POSIX `fork`/`waitpid` parallel generation (`generate_parallel_dataset.m`).
+*   **`src/native`**: High-performance C++ `oct` extensions compiled into `build/oct/` (`petrinet_prune_oct.cc`, `generate_reachability_graph_oct.cc`, `hash_marking_64_oct.cc`, `solve_steady_state_oct.cc`, `compute_average_markings_oct.cc`, `export_dataset_hdf5_oct.cc`, `import_dataset_hdf5_oct.cc`).
+*   **`src/petrinet`**: Petri net generation, bipartite connectivity validation, random token addition, structural pruning, and high-level classdef wrapper (`PetriNet.m`).
+*   **`src/generation`**: Reachability graph exploration, classdef wrapper (`ReachabilityGraph.m`), and POSIX `fork`/`waitpid` parallel multiprocessing generation (`generate_parallel_dataset.m`).
 *   **`src/analysis`**: CTMC infinitesimal generator computation, steady-state probability solving (exact direct LU and sparse uniformization iterative solver), and average place markings.
 *   **`src/augmentation`**: Net structure and transition firing rate ($\lambda$) perturbation.
 *   **`src/grid`**: 2D stratified grid partitioning across place count and state-space boundaries.
-*   **`src/report`**: Aggregate dataset statistics and interactive HTML report generation.
-*   **`src/utils`**: JSON configuration and JSONL streaming serialization.
+*   **`src/report`**: Aggregate dataset statistics, dataset inspection (`analyze_dataset.m`), and interactive HTML report generation.
+*   **`src/utils`**: JSON configuration, canonical defaults (`get_default_config.m`), HDF5, and JSONL streaming serialization.
+
+> **Note**: The core dataset generator and multiprocessing pipeline operate on vectorized flat `struct` representations for zero-allocation performance, with `PetriNet.m` and `ReachabilityGraph.m` providing object-oriented convenience wrappers.
 
 ---
 
@@ -39,9 +42,9 @@ A containerized development environment is provided via `./dev.sh` with GNU Octa
 
 *   **Run the dataset generator**:
     ```bash
-    ./dev.sh octave --eval "main"
-    # or with CLI flags:
-    ./dev.sh octave --eval "main('--config', 'config.json', '--workers', 'auto', '--samples', '100')"
+    ./dev.sh run --samples 100
+    # or with full options:
+    ./dev.sh run --config config.json --workers auto --samples 100 --output output.jsonl
     ```
 
 *   **Run benchmarks**:

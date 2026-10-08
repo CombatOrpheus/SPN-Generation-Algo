@@ -10,17 +10,19 @@ This repository contains an Octave implementation of an algorithm for generating
 
 - **`main.m`**: Command-line entry point supporting arguments (`--config`, `--mode`, `--samples`, `--workers`, `--seed`, `--output`, `--exact`).
 - **`config.json`**: Default dataset generation configuration.
+- **`setup_paths.m`**: Search path initialization for libraries, test helpers, and compiled extensions.
 - **`src/`**: Modular core libraries:
-  - `petrinet/`: Net representation, bipartite connectivity BFS, token assignment, and C++ accelerated pruning (`petrinet_prune_oct.cc`).
-  - `generation/`: BFS reachability graph generator with C++ oct acceleration (`generate_reachability_graph_oct.cc`), 64-bit marking hash (`hash_marking_64_oct.cc`), and parallel multiprocessing generation (`generate_parallel_dataset.m`).
+  - `native/`: High-performance C++ `oct` extensions (`petrinet_prune_oct.cc`, `generate_reachability_graph_oct.cc`, `hash_marking_64_oct.cc`, `solve_steady_state_oct.cc`, `compute_average_markings_oct.cc`, `export_dataset_hdf5_oct.cc`, `import_dataset_hdf5_oct.cc`).
+  - `petrinet/`: Net representation, bipartite connectivity BFS, token assignment, and pruning wrapper.
+  - `generation/`: BFS reachability graph generator and parallel multiprocessing generation (`generate_parallel_dataset.m`).
   - `analysis/`: Infinitesimal CTMC generator matrix, steady-state solving (direct LU and sparse uniformization iterative power iteration), and place marking densities.
   - `augmentation/`: Net structure and transition firing rate variations.
   - `grid/`: 2D stratified partitioning across place and state-space boundaries.
-  - `report/`: Dataset summary statistics and HTML visual report generation.
-  - `utils/`: JSON configuration and JSONL streaming serializers.
-- **`tests/`**: Modular test suites executed via `tests/run_tests.m` or `./dev.sh test`.
+  - `report/`: Dataset summary statistics, frequentist analysis (`analyze_dataset.m`), and HTML visual report generation.
+  - `utils/`: JSON configuration, default configuration schemas, HDF5, and JSONL streaming serializers.
+- **`tests/`**: Modular test suites and shared test fixtures (`tests/helpers/`) executed via `tests/run_tests.m` or `./dev.sh test`.
 - **`benchmarks/`**: Microbenchmarks and 1000-net scaling benchmarks matching `SPN-Algo-Go`.
-- **`Makefile`**: Builds C++ `.oct` files via `mkoctfile`.
+- **`Makefile`**: Portable build script compiling C++ `.oct` files from `src/native/` into `build/oct/`.
 - **`dev.sh`**: Helper script managing Docker/Podman containers and test/build workflows.
 
 
