@@ -4,12 +4,9 @@ function run_scaling_1000()
   repo_root = fileparts(this_dir);
   if !isempty(repo_root)
     addpath(repo_root);
-    addpath(fullfile(repo_root, "src/petrinet"));
-    addpath(fullfile(repo_root, "src/generation"));
-    addpath(fullfile(repo_root, "src/analysis"));
-    addpath(fullfile(repo_root, "src/augmentation"));
-    addpath(fullfile(repo_root, "src/utils"));
-    addpath(fullfile(repo_root, "src/report"));
+  endif
+  if exist("setup_paths", "file")
+    setup_paths();
   endif
 
   printf("===================================================================\n");

@@ -48,8 +48,12 @@ function [avg_markings, marking_densities] = compute_average_markings(rg, steady
   probs = double(steady_state_probs(:));
 
   if !force_pure_octave && exist("compute_average_markings_oct", "file") == 3
-    [avg_markings, marking_densities] = compute_average_markings_oct(int32(rg.vertices), probs, P);
-    return;
+    try
+      [avg_markings, marking_densities] = compute_average_markings_oct(int32(rg.vertices), probs, P);
+      return;
+    catch
+      % Fallback to pure Octave if dynamic link or execution fails
+    end_try_catch
   endif
 
   % Vectorized computation of average tokens per place

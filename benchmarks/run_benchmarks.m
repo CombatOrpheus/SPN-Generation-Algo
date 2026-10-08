@@ -1,9 +1,13 @@
 % run_benchmarks.m - Benchmarking suite matching SPN-Algo-Go benchmarks
 
 function run_benchmarks()
-  addpath("benchmarks");
-  if exist("build/oct", "dir")
-    addpath("build/oct");
+  this_dir = fileparts(mfilename("fullpath"));
+  repo_root = fileparts(this_dir);
+  if !isempty(repo_root)
+    addpath(repo_root);
+  endif
+  if exist("setup_paths", "file")
+    setup_paths();
   endif
   printf("===================================================================\n");
 

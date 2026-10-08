@@ -31,9 +31,13 @@ function pn = petrinet_prune(pn, force_pure_octave)
   T = pn.transitions;
 
   if !force_pure_octave && exist("petrinet_prune_oct", "file") == 3
-    c_seed = randi(intmax("int32"));
-    pn.matrix = petrinet_prune_oct(int32(pn.matrix), int32(P), int32(T), uint32(c_seed));
-    return;
+    try
+      c_seed = randi(intmax("int32"));
+      pn.matrix = petrinet_prune_oct(int32(pn.matrix), int32(P), int32(T), uint32(c_seed));
+      return;
+    catch
+      % Fallback to pure Octave if dynamic link or execution fails
+    end_try_catch
   endif
 
   % Optimized pure Octave implementation with O(1) connectivity tracking

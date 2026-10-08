@@ -68,8 +68,12 @@ function [probs, err] = solve_steady_state_iterative(rg, lambda_values, max_iter
   endif
 
   if !force_pure_octave && exist("solve_steady_state_oct", "file") == 3
-    [probs, err] = solve_steady_state_oct(int32(rg.edges), int32(rg.arc_transitions), double(lambda_values), V, int32(max_iter), double(tol));
-    return;
+    try
+      [probs, err] = solve_steady_state_oct(int32(rg.edges), int32(rg.arc_transitions), double(lambda_values), V, int32(max_iter), double(tol));
+      return;
+    catch
+      % Fallback to pure Octave if dynamic link or execution fails
+    end_try_catch
   endif
 
   src = double(rg.edges(:, 1));

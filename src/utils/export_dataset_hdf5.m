@@ -59,8 +59,12 @@ function export_dataset_hdf5(source, filepath, compression_level, force_pure_oct
 
   % Use C++ oct-file acceleration when available
   if !force_pure_octave && exist("export_dataset_hdf5_oct", "file") == 3
-    export_dataset_hdf5_oct(samples, filepath, compression_level);
-    return;
+    try
+      export_dataset_hdf5_oct(samples, filepath, compression_level);
+      return;
+    catch
+      % Fallback to pure Octave if dynamic link or execution fails
+    end_try_catch
   endif
 
   % Pure Octave fallback implementation

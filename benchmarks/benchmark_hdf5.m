@@ -9,14 +9,13 @@ function benchmark_hdf5(num_samples)
     num_samples = 100;
   endif
 
-  % Add include paths
-  addpath("src/petrinet");
-  addpath("src/generation");
-  addpath("src/analysis");
-  addpath("src/augmentation");
-  addpath("src/utils");
-  if exist("build/oct", "dir")
-    addpath("build/oct");
+  this_dir = fileparts(mfilename("fullpath"));
+  repo_root = fileparts(this_dir);
+  if !isempty(repo_root)
+    addpath(repo_root);
+  endif
+  if exist("setup_paths", "file")
+    setup_paths();
   endif
 
   printf("========================================================================================\n");

@@ -13,6 +13,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     ca-certificates \
     curl \
     git \
+    gnuplot \
+    libhdf5-dev \
     make \
     procps \
     sudo \

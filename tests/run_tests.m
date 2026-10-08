@@ -4,14 +4,10 @@ function run_tests()
   repo_root = fileparts(this_dir);
   if !isempty(repo_root)
     addpath(repo_root);
-    addpath(fullfile(repo_root, "tests"));
-    addpath(genpath(fullfile(repo_root, "src")));
-    build_oct_dir = fullfile(repo_root, "build", "oct");
-    if exist(build_oct_dir, "dir")
-      addpath(build_oct_dir);
-    endif
   endif
-  addpath(".");
+  if exist("setup_paths", "file")
+    setup_paths();
+  endif
 
   printf("===================================================================\n");
   printf("  SPN-Algo-Octave Test Suite (GNU Octave %s)\n", version());

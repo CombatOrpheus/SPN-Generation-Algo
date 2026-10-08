@@ -55,8 +55,12 @@ function rg = generate_reachability_graph(pn, place_upper_limit, max_markings_to
 
   % If C++ oct extension is available, use it for optimal speed
   if !force_pure_octave && exist("generate_reachability_graph_oct", "file") == 3
-    rg = generate_reachability_graph_oct(mat, P, T, init_m, place_limit, max_marks);
-    return;
+    try
+      rg = generate_reachability_graph_oct(mat, P, T, init_m, place_limit, max_marks);
+      return;
+    catch
+      % Fallback to pure Octave if dynamic link or execution fails
+    end_try_catch
   endif
 
   % Pure Octave fallback implementation

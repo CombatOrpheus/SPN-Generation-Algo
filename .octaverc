@@ -1,11 +1,7 @@
-% Automatically add src and tests directories to Octave search path
+% Automatically initialize Octave search paths via setup_paths
 root_dir = fileparts(mfilename('fullpath'));
 if isempty(root_dir)
   root_dir = pwd();
 endif
-addpath(genpath(fullfile(root_dir, 'src')));
-addpath(fullfile(root_dir, 'tests'));
-build_oct_dir = fullfile(root_dir, 'build', 'oct');
-if exist(build_oct_dir, 'dir')
-  addpath(build_oct_dir);
-endif
+addpath(root_dir);
+setup_paths();
