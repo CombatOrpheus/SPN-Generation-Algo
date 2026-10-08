@@ -30,6 +30,15 @@
 function main(varargin)
   ignore_function_time_stamp("all");
 
+  this_dir = fileparts(mfilename("fullpath"));
+  if isempty(this_dir)
+    this_dir = pwd();
+  endif
+  addpath(this_dir);
+  if exist("setup_paths", "file")
+    setup_paths();
+  endif
+
   if nargin == 0 && length(argv()) > 0
     varargin = argv();
   endif
@@ -45,12 +54,16 @@ function main(varargin)
   cli_workers = "";
   cli_format = "";
   cli_compression = [];
+  cli_analyze = "";
 
   % Parse CLI args
   i = 1;
   while i <= length(varargin)
     arg = varargin{i};
-    if strcmp(arg, "--config") && i < length(varargin)
+    if strcmp(arg, "--analyze") && i < length(varargin)
+      cli_analyze = varargin{i + 1};
+      i = i + 2;
+    elseif strcmp(arg, "--config") && i < length(varargin)
       config_path = varargin{i + 1};
       i = i + 2;
     elseif (strcmp(arg, "--workers") || strcmp(arg, "-j")) && i < length(varargin)
@@ -88,6 +101,11 @@ function main(varargin)
     endif
   endwhile
 
+  if !isempty(cli_analyze)
+    analyze_dataset(cli_analyze);
+    return;
+  endif
+
   if !exist(config_path, "file")
     error("Configuration file not found: %s", config_path);
   endif
@@ -114,13 +132,9 @@ function main(varargin)
   endif
   if !isempty(cli_exact)
     config.exact_samples = cli_exact;
-  elseif !isfield(config, "exact_samples")
-    config.exact_samples = true;
   endif
   if !isempty(cli_workers)
     config.num_workers = cli_workers;
-  elseif !isfield(config, "num_workers")
-    config.num_workers = "auto";
   endif
   if !isempty(cli_format)
     config.format = cli_format;
@@ -129,8 +143,8 @@ function main(varargin)
     config.hdf5_compression_level = cli_compression;
   endif
 
-  % Validate configuration parameters before execution
-  validate_config(config);
+  % Validate configuration parameters and populate standard defaults
+  config = validate_config(config);
 
   % Initialize RNG seed if configured
   if isfield(config, "seed") && !isempty(config.seed)
@@ -150,6 +164,7 @@ function print_usage()
   printf("Usage: octave main.m [OPTIONS]\n\n");
   printf("Options:\n");
   printf("  --config <path>         Path to JSON configuration file (default: config.json)\n");
+  printf("  --analyze <path>        Analyze existing dataset (.jsonl or .h5) and generate report\n");
   printf("  --mode <mode>           Generation mode: 'random' or 'grid'\n");
   printf("  --samples <N>           Number of samples to generate\n");
   printf("  --output <path>         Output file destination path\n");
@@ -239,4 +254,14 @@ function run_grid_generation(config)
   fclose(out_fid);
 
   printf("Grid generation complete: %d samples saved to %s\n", length(results), config.output_grid_location);
+
+  % 5. Optional HTML statistics report
+  if isfield(config, "enable_statistics_report") && config.enable_statistics_report
+    stats = calculate_stats(results);
+    report_path = [config.output_grid_location, ".html"];
+    generate_html_report(report_path, stats);
+    printf("\nGenerated HTML statistics report: %s\n", report_path);
+    table_str = format_stats_table(stats);
+    printf("%s\n", table_str);
+  endif
 endfunction

@@ -37,17 +37,17 @@
 ## @end deftypefn
 
 function [total_written, stats] = generate_parallel_dataset(config, num_workers, output_file)
-  if nargin < 2 || isempty(num_workers)
-    if isfield(config, "num_workers")
-      num_workers = config.num_workers;
-    else
-      num_workers = "auto";
-    endif
-  endif
+  config = validate_config(config);
 
-  if nargin < 3 || isempty(output_file)
-    output_file = config.output_file;
+  if nargin >= 2 && !isempty(num_workers)
+    config.num_workers = num_workers;
   endif
+  num_workers = config.num_workers;
+
+  if nargin >= 3 && !isempty(output_file)
+    config.output_file = output_file;
+  endif
+  output_file = config.output_file;
 
   % Resolve worker count
   if ischar(num_workers)
@@ -232,9 +232,9 @@ function stats = finalize_dataset(config, output_file, total_written, results, q
     report_path = [output_file, ".html"];
     generate_html_report(report_path, stats);
     if !quiet
-      printf("Generated HTML statistics report: %s\n", report_path);
-      printf("Stats: %d samples, avg places=%.2f, avg trans=%.2f, avg markings=%.2f\n", ...
-             stats.num_samples, stats.avg_places, stats.avg_transitions, stats.avg_markings);
+      printf("\nGenerated HTML statistics report: %s\n", report_path);
+      table_str = format_stats_table(stats);
+      printf("%s\n", table_str);
     endif
   else
     stats = struct();
@@ -269,7 +269,7 @@ function stats = finalize_dataset(config, output_file, total_written, results, q
     endif
 
     if !quiet
-      printf("Exported HDF5 dataset (%s layout, compression %d) to: %s\n", layout, comp_lvl, h5_file);
+      printf("Exported HDF5 dataset (flat layout, compression %d) to: %s\n", comp_lvl, h5_file);
     endif
 
     if strcmp(fmt, "hdf5") && !strcmp(output_file, h5_file) && exist(output_file, "file")
@@ -279,56 +279,10 @@ function stats = finalize_dataset(config, output_file, total_written, results, q
 endfunction
 
 function stats = compute_streaming_stats_jsonl(file_path)
-  stats = struct("num_samples", 0, "avg_places", 0.0, "avg_transitions", 0.0, ...
-                 "avg_markings", 0.0, "avg_steady_state_probs", 0.0);
-
-  fid = fopen(file_path, "r");
-  if fid < 0
+  if !exist(file_path, "file")
+    stats = calculate_stats({});
     return;
   endif
-
-  total_samples = 0;
-  total_places = 0.0;
-  total_transitions = 0.0;
-  total_markings = 0.0;
-  total_probs = 0.0;
-
-  while true
-    line = fgetl(fid);
-    if !ischar(line)
-      break;
-    endif
-    if isempty(strtrim(line))
-      continue;
-    endif
-
-    s = jsondecode(line);
-    total_samples = total_samples + 1;
-
-    if isstruct(s.petri_net)
-      total_places = total_places + double(s.petri_net.places);
-      total_transitions = total_transitions + double(s.petri_net.transitions);
-    else
-      % s.petri_net is P x (2T + 1) matrix
-      total_places = total_places + double(size(s.petri_net, 1));
-      total_transitions = total_transitions + double((size(s.petri_net, 2) - 1) / 2);
-    endif
-
-    if isfield(s, "average_markings")
-      total_markings = total_markings + sum(double(s.average_markings(:)));
-    endif
-
-    if isfield(s, "steady_state_probs")
-      total_probs = total_probs + sum(double(s.steady_state_probs(:)));
-    endif
-  endwhile
-  fclose(fid);
-
-  if total_samples > 0
-    stats.num_samples = total_samples;
-    stats.avg_places = total_places / total_samples;
-    stats.avg_transitions = total_transitions / total_samples;
-    stats.avg_markings = total_markings / total_samples;
-    stats.avg_steady_state_probs = total_probs / total_samples;
-  endif
+  samples = load_jsonl(file_path);
+  stats = calculate_stats(samples);
 endfunction

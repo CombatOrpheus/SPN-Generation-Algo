@@ -114,8 +114,11 @@ function [generated_count, attempts, results] = generate_samples_chunk(config, t
         r = struct();
         r.num_places = var_res.petri_net.places;
         r.num_transitions = var_res.petri_net.transitions;
+        r.num_states = var_res.reachability_graph.num_vertices;
+        r.num_edges = var_res.reachability_graph.num_edges;
         r.average_markings = var_res.average_markings;
         r.steady_state_probs = var_res.steady_state_probs;
+        r.marking_densities = var_res.marking_densities;
         generated_count = generated_count + 1;
         if generated_count > length(results)
           results{generated_count * 2} = [];
@@ -128,8 +131,11 @@ function [generated_count, attempts, results] = generate_samples_chunk(config, t
       r = struct();
       r.num_places = pn.places;
       r.num_transitions = pn.transitions;
+      r.num_states = rg.num_vertices;
+      r.num_edges = rg.num_edges;
       r.average_markings = avg_markings;
       r.steady_state_probs = probs;
+      r.marking_densities = densities;
       generated_count = generated_count + 1;
       if generated_count > length(results)
         results{generated_count * 2} = [];
